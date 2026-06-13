@@ -1,14 +1,14 @@
 package com.arashivision.orientation
 
 /**
- * Уже извлечённая ориентация устройства за один кадр сенсора — результат работы
+ * The already-extracted device orientation for one sensor frame — the result of
  * RotationMatrixMath (native getRotationMatrixFromVector + remapCoordinateSystem +
- * getOrientation, с выбором оси под поворот экрана). Чистые данные для OrientationProcessor.
+ * getOrientation, with axis selection for the display rotation). Pure data for OrientationProcessor.
  *
- * @param quaternion ориентация как кватернион (из remapped-матрицы)
- * @param rawYawDeg yaw из getOrientation (градусы), азимут
- * @param rawPitchDeg pitch-компонента, уже выбранная по ориентации экрана (градусы)
- * @param rawRollDeg roll (градусы), для отладки
+ * @param quaternion the orientation as a quaternion (from the remapped matrix)
+ * @param rawYawDeg yaw from getOrientation (degrees), azimuth
+ * @param rawPitchDeg the pitch component, already selected by display orientation (degrees)
+ * @param rawRollDeg roll (degrees), for debugging
  */
 data class SensorOrientation(
     val quaternion: Quaternion,

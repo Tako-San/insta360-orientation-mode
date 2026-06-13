@@ -6,17 +6,17 @@ import com.arashivision.orientation.Quaternion
 import com.arashivision.orientation.SensorOrientation
 
 /**
- * Порт над нативными функциями ориентации Android (getRotationMatrixFromVector,
- * remapCoordinateSystem, getOrientation). Прячет единственную часть гиро-логики,
- * которую нельзя выполнить в чистом JVM. Реальная реализация покрыта Robolectric-тестом;
- * OrientationProcessor получает уже готовый [SensorOrientation].
+ * Port over Android's native orientation functions (getRotationMatrixFromVector,
+ * remapCoordinateSystem, getOrientation). Hides the only part of the gyro logic
+ * that cannot run on a pure JVM. The real implementation is covered by a Robolectric test;
+ * OrientationProcessor receives an already-prepared [SensorOrientation].
  */
 interface RotationMatrixMath {
-    /** Построить ориентацию из сырого вектора поворота и текущего поворота экрана. */
+    /** Build the orientation from the raw rotation vector and the current display rotation. */
     fun fromRotationVector(rotationVectorValues: FloatArray, displayRotation: Int): SensorOrientation
 }
 
-/** Боевая реализация на нативных SensorManager-функциях. */
+/** Production implementation using native SensorManager functions. */
 class AndroidRotationMatrixMath : RotationMatrixMath {
     private val rotMat = FloatArray(9)
     private val remapped = FloatArray(9)

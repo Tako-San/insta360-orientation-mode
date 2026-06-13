@@ -12,8 +12,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 object ViewBindingUtils {
 
-    // Кэш inflate-методов per binding-класс: getMethod() дорог и вызывается на каждый
-    // onCreateViewHolder. Ключ — (binding class, withViewGroup).
+    // Cache of inflate methods per binding class: getMethod() is expensive and is called on every
+    // onCreateViewHolder. Key is (binding class, withViewGroup).
     private val inflateWithGroupCache = ConcurrentHashMap<Class<*>, Method>()
     private val inflateNoGroupCache = ConcurrentHashMap<Class<*>, Method>()
 
@@ -52,7 +52,7 @@ object ViewBindingUtils {
             val tClass = getParameterizedTypeClass(owner.javaClass, index) as Class<T>
             return ViewModelProvider(owner)[tClass]
         } catch (e: Exception) {
-            // Сохраняем cause/stacktrace (раньше терялось через RuntimeException(e.message)).
+            // Preserve cause/stacktrace (previously lost via RuntimeException(e.message)).
             throw RuntimeException("createViewModel failed for ${owner.javaClass}[$index]", e)
         }
     }

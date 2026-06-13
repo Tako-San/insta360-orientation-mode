@@ -21,9 +21,9 @@ class VideoDetectionTimelineTest {
     @Test
     fun returnsNearestFrameByTime() {
         val tl = timeline(frame(0, 0.0), frame(1, 1.0), frame(2, 2.0))
-        // 1100ms = 1.1s ближе к 1.0 чем к 2.0
+        // 1100ms = 1.1s is closer to 1.0 than to 2.0
         assertEquals(1, tl.frameAt(1100L)?.frameIdx)
-        // 1600ms = 1.6s ближе к 2.0
+        // 1600ms = 1.6s is closer to 2.0
         assertEquals(2, tl.frameAt(1600L)?.frameIdx)
     }
 

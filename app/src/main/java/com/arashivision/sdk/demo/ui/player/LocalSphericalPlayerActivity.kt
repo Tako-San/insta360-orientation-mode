@@ -49,12 +49,12 @@ class LocalSphericalPlayerActivity :
 
     private val uiHandler = Handler(Looper.getMainLooper())
     private val detectionParser = VideoDetectionSidecarParser()
-    // Зонд A: поворот сферы media3 через приватный GL-рендерер (setYaw/setPitch у media3 нет).
+    // Probe A: rotate the media3 sphere via its private GL renderer (media3 has no setYaw/setPitch).
     private val playerSink: OrientationApplier by lazy { Media3SphericalOrientationSink(binding.sphericalView) }
     private var currentGazeDirection: PanoramaDirection = EquirectangularProjection.fromYawPitch(0.0, 0.0)
 
-    // Оркестрация ориентации плеера (чистая логика в :lib, тестируется на JVM): инверсия
-    // знаков под media3 + адаптивное сглаживание (давит дрожь на покое, не тормозит повороты).
+    // Player orientation orchestration (pure logic in :lib, tested on the JVM): sign inversion
+    // for media3 plus adaptive smoothing (suppresses jitter at rest, does not slow down turns).
     private val orientationCoordinator = PlayerOrientationCoordinator()
     private val detectionUpdateRunnable = object : Runnable {
         override fun run() {
@@ -303,7 +303,7 @@ class LocalSphericalPlayerActivity :
     }
 
     private fun updateDirectionArrow(detections: List<VideoDetectedObject>) {
-        // Отладочный лог по первой детекции (поведение сохранено).
+        // Debug log for the first detection (behavior preserved).
         detections.firstOrNull()?.let { first ->
             val targetDirection = EquirectangularProjection.fromNormalized(
                 x = first.centerNorm.x.coerceIn(0.0, 1.0),
@@ -318,7 +318,7 @@ class LocalSphericalPlayerActivity :
             logQuaternionDebug(first, targetDirection, result)
         }
 
-        // Чистая логика выбора стрелки вынесена в :lib (тестируется на JVM).
+        // The pure arrow-selection logic is extracted into :lib (tested on the JVM).
         val arrow = DetectionArrowResolver.resolve(
             objects = detections,
             gaze = currentGazeDirection,
@@ -375,9 +375,9 @@ class LocalSphericalPlayerActivity :
     private fun tryApplyOrientation(yawDeg: Float, pitchDeg: Float) {
         if (!viewModel.sensorRotationEnabled) return
 
-        // Координатор (чистая логика :lib) инвертирует знаки под media3 и сглаживает.
-        // Источник — калибровочно-относительные gaze-углы гиро (живые, в отличие от
-        // кватернионного toEulerAngles, чей yaw сломан по осям).
+        // The coordinator (pure :lib logic) inverts signs for media3 and smooths.
+        // The source is the calibration-relative gaze angles from the gyro (live, unlike
+        // the quaternion toEulerAngles, whose yaw is broken along the axes).
         val smoothed = orientationCoordinator.coordinate(
             rawGazeYawDeg = gyroController.getGazeYawDeg(),
             rawGazePitchDeg = gyroController.getGazePitchDeg()
@@ -390,7 +390,7 @@ class LocalSphericalPlayerActivity :
             pitchRad = Math.toRadians(gazePitchDeg.coerceIn(-MAX_PITCH_DEG, MAX_PITCH_DEG).toDouble())
         )
 
-        // Повернуть сферу media3 через приватный рендерер (onScrollChange, градусы).
+        // Rotate the media3 sphere via its private renderer (onScrollChange, degrees).
         playerSink.apply(gazeYawDeg, gazePitchDeg)
     }
 

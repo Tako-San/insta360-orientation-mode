@@ -3,16 +3,16 @@ package com.arashivision.orientation
 import kotlin.math.abs
 
 /**
- * Адаптивное сглаживание углов ориентации (yaw/pitch в градусах).
+ * Adaptive smoothing of orientation angles (yaw/pitch in degrees).
  *
- * Чистая JVM-логика без Android-зависимостей — тестируется на JVM. Давит дрожание
- * датчика на покое (малая дельта → сильное сглаживание) и почти не сглаживает быстрые
- * повороты (большая дельта → alpha→1, нет задержки). Yaw обрабатывается с учётом
- * перехода через ±180°.
+ * Pure JVM logic without Android dependencies — tested on the JVM. Suppresses sensor
+ * jitter at rest (small delta → strong smoothing) and barely smooths fast
+ * turns (large delta → alpha→1, no lag). Yaw is handled accounting for
+ * the wrap across ±180°.
  *
- * @param alphaMin коэффициент сглаживания на покое (сильное сглаживание)
- * @param alphaMax коэффициент при быстром движении (без задержки)
- * @param speedFullDeg дельта (град/тик), при которой alpha достигает alphaMax
+ * @param alphaMin the smoothing coefficient at rest (strong smoothing)
+ * @param alphaMax the coefficient during fast motion (no lag)
+ * @param speedFullDeg the delta (deg/tick) at which alpha reaches alphaMax
  */
 class OrientationSmoothing(
     private val alphaMin: Float = 0.15f,
@@ -23,14 +23,14 @@ class OrientationSmoothing(
     private var smoothedPitch = 0f
     private var initialized = false
 
-    /** Сбросить состояние — следующий [update] примет входные углы как есть. */
+    /** Reset the state — the next [update] will take the input angles as-is. */
     fun reset() {
         initialized = false
     }
 
     /**
-     * Подать сырые углы, получить сглаженные. Первый вызов (или после [reset])
-     * возвращает вход без изменений и инициализирует состояние.
+     * Feed raw angles, get smoothed ones. The first call (or after [reset])
+     * returns the input unchanged and initializes the state.
      */
     fun update(rawYawDeg: Float, rawPitchDeg: Float): TargetOrientation {
         if (!initialized) {
@@ -51,9 +51,9 @@ class OrientationSmoothing(
     }
 
     /**
-     * Коэффициент сглаживания в зависимости от скорости изменения угла (град/тик).
-     * Линейная интерполяция alpha от [alphaMin] (покой) до [alphaMax] (быстрое движение)
-     * по мере роста скорости от 0 до [speedFullDeg].
+     * The smoothing coefficient as a function of the angle change rate (deg/tick).
+     * Linear interpolation of alpha from [alphaMin] (rest) to [alphaMax] (fast motion)
+     * as the speed grows from 0 to [speedFullDeg].
      */
     fun adaptiveAlpha(deltaDeg: Float): Float {
         val t = (abs(deltaDeg) / speedFullDeg).coerceIn(0f, 1f)

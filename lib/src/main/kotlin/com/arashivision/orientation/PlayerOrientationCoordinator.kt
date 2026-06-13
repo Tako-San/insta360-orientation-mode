@@ -1,24 +1,24 @@
 package com.arashivision.orientation
 
 /**
- * Чистая (JVM) оркестрация ориентации офлайн-плеера: берёт калибровочно-относительные
- * углы взгляда (gaze) из гиро, инвертирует знаки под направление media3 и сглаживает.
- * Возвращает итоговые yaw/pitch (градусы), которые Activity подаёт И в сферу (через
- * OrientationApplier), И в направление взгляда для стрелки — из одного источника, чтобы
- * сфера и стрелка были синхронны.
+ * Pure (JVM) orientation orchestration for the offline player: takes the calibration-relative
+ * gaze angles from the gyro, inverts the signs to match the media3 direction, and smooths them.
+ * Returns the final yaw/pitch (degrees), which the Activity feeds BOTH into the sphere (via
+ * OrientationApplier) AND into the gaze direction for the arrow — from a single source, so that
+ * the sphere and the arrow stay in sync.
  *
- * Знаки инвертированы: media3 onScrollChange крутит сферу противоположно повороту
- * телефона (по часовой → картинка против), и pitch перевёрнут (подтверждено зондом A).
+ * The signs are inverted: media3 onScrollChange rotates the sphere opposite to the phone's
+ * rotation (clockwise → image counter-clockwise), and pitch is flipped (confirmed by probe A).
  *
- * @param smoothing адаптивное сглаживание (давит дрожь на покое, не тормозит повороты)
+ * @param smoothing adaptive smoothing (suppresses jitter at rest, does not slow down turns)
  */
 class PlayerOrientationCoordinator(
     private val smoothing: OrientationSmoothing = OrientationSmoothing()
 ) {
     /**
-     * @param rawGazeYawDeg gaze yaw из гиро (getGazeYawDeg)
-     * @param rawGazePitchDeg gaze pitch из гиро (getGazePitchDeg)
-     * @return сглаженные инвертированные углы для сферы и стрелки
+     * @param rawGazeYawDeg gaze yaw from the gyro (getGazeYawDeg)
+     * @param rawGazePitchDeg gaze pitch from the gyro (getGazePitchDeg)
+     * @return the smoothed, inverted angles for the sphere and the arrow
      */
     fun coordinate(rawGazeYawDeg: Float, rawGazePitchDeg: Float): TargetOrientation {
         val invertedYaw = -rawGazeYawDeg
@@ -26,6 +26,6 @@ class PlayerOrientationCoordinator(
         return smoothing.update(invertedYaw, invertedPitch)
     }
 
-    /** Сбросить сглаживание (например, при пересоздании плеера). */
+    /** Reset the smoothing (for example, when the player is recreated). */
     fun reset() = smoothing.reset()
 }

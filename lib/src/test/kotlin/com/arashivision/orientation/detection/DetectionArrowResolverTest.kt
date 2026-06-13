@@ -30,7 +30,7 @@ class DetectionArrowResolverTest {
 
     @Test
     fun `target dead ahead is inside fov so arrow hidden`() {
-        // gaze смотрит в центр (yaw0/pitch0). Цель в центре эквирект-картинки (0.5,0.5) = вперёд.
+        // gaze looks at the center (yaw0/pitch0). The target at the center of the equirect image (0.5,0.5) = forward.
         val gaze = EquirectangularProjection.fromYawPitch(0.0, 0.0)
         val s = DetectionArrowResolver.resolve(listOf(obj(0.5, 0.5)), gaze, hFov, vFov)
         assertFalse("target ahead must be inside FOV", s.visible)
@@ -39,7 +39,7 @@ class DetectionArrowResolverTest {
     @Test
     fun `target far to the side shows arrow with angle`() {
         val gaze = EquirectangularProjection.fromYawPitch(0.0, 0.0)
-        // цель у левого края панорамы (normX≈0.0) — далеко вне 60° FOV
+        // the target at the left edge of the panorama (normX≈0.0) — far outside the 60° FOV
         val s = DetectionArrowResolver.resolve(listOf(obj(0.02, 0.5)), gaze, hFov, vFov)
         assertTrue("target to the side must be outside FOV", s.visible)
         assertNotNull(s.angleRad)
@@ -48,7 +48,7 @@ class DetectionArrowResolverTest {
     @Test
     fun `picks first detection that is outside fov`() {
         val gaze = EquirectangularProjection.fromYawPitch(0.0, 0.0)
-        // первая цель — в центре (внутри FOV), вторая — сбоку (вне). Резолвер должен выбрать вторую.
+        // the first target is in the center (inside the FOV), the second is to the side (outside). The resolver must pick the second.
         val s = DetectionArrowResolver.resolve(
             listOf(obj(0.5, 0.5, id = 1), obj(0.02, 0.5, id = 2)),
             gaze, hFov, vFov

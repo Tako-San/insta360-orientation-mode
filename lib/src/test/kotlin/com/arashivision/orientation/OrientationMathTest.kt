@@ -173,7 +173,7 @@ class OrientationMathTest {
 
     @Test
     fun fromRotationMatrix180AboutYUsesM11Branch() {
-        // 180° about Y: diag(-1, 1, -1), trace = -1, mat[4] наибольший → ветка m11
+        // 180° about Y: diag(-1, 1, -1), trace = -1, mat[4] largest → m11 branch
         val m = floatArrayOf(-1f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, -1f)
         val q = Quaternion.fromRotationMatrix(m)
         assertEquals(1.0f, kotlin.math.abs(q.y), qeps)
@@ -184,7 +184,7 @@ class OrientationMathTest {
 
     @Test
     fun fromRotationMatrix180AboutZUsesM22Branch() {
-        // 180° about Z: diag(-1, -1, 1), trace = -1, mat[8] наибольший → ветка m22 (else)
+        // 180° about Z: diag(-1, -1, 1), trace = -1, mat[8] largest → m22 branch (else)
         val m = floatArrayOf(-1f, 0f, 0f, 0f, -1f, 0f, 0f, 0f, 1f)
         val q = Quaternion.fromRotationMatrix(m)
         assertEquals(1.0f, kotlin.math.abs(q.z), qeps)
@@ -195,8 +195,8 @@ class OrientationMathTest {
 
     @Test
     fun slerpTakesShortPathWhenDotNegative() {
-        // q2 = -q1 представляет тот же поворот; dot < 0 → ветка отрицания.
-        // Результат должен остаться единичным и совпасть с q1 по направлению.
+        // q2 = -q1 represents the same rotation; dot < 0 → negation branch.
+        // The result must remain a unit quaternion and match q1 in direction.
         val a = Quaternion(1f, 0f, 0f, 0f)
         val b = Quaternion(-1f, 0f, 0f, 0f)
         val r = Quaternion.slerp(a, b, 0.5f)
@@ -206,7 +206,7 @@ class OrientationMathTest {
 
     @Test
     fun slerpMidpointIsUnitAndBetween() {
-        // halfway между identity и поворотом 90° about Z = поворот 45° about Z
+        // halfway between identity and a 90° rotation about Z = a 45° rotation about Z
         val s = kotlin.math.sqrt(0.5f)
         val a = Quaternion(1f, 0f, 0f, 0f)
         val b = Quaternion(s, 0f, 0f, s)
@@ -219,7 +219,7 @@ class OrientationMathTest {
 
     @Test
     fun multiplyIsNonCommutative() {
-        // повороты вокруг разных осей не коммутируют
+        // rotations about different axes do not commute
         val s = kotlin.math.sqrt(0.5f)
         val qx = Quaternion(s, s, 0f, 0f)  // 90° about X
         val qy = Quaternion(s, 0f, s, 0f)  // 90° about Y
@@ -241,14 +241,14 @@ class OrientationMathTest {
 
     @Test
     fun toEulerAnglesUnwrapsTowardPreviousAcross180() {
-        // yaw около +180°; с previousYaw ≈ -179 unwrap должен вернуть значение около -180,
-        // а не +180 (ближайшее к reference).
+        // yaw near +180°; with previousYaw ≈ -179 the unwrap must return a value near -180,
+        // not +180 (the closest to the reference).
         val s = kotlin.math.sqrt(0.5f)
-        // поворот ~180° about Z даёт yaw близко к ±180
-        val q = Quaternion(0.0001f, 0f, 0f, 1f) // почти 180° about Z
+        // a ~180° rotation about Z gives yaw close to ±180
+        val q = Quaternion(0.0001f, 0f, 0f, 1f) // almost 180° about Z
         val (yawNoPrev, _, _) = q.toEulerAngles()
         val (yawWithPrev, _, _) = q.toEulerAngles(previousYaw = -179f)
-        // без previous yaw ≈ +180; с previous -179 должен стать ≈ -180 (непрерывность)
+        // without previous, yaw ≈ +180; with previous -179 it must become ≈ -180 (continuity)
         assertTrue(kotlin.math.abs(yawWithPrev - (-179f)) <= kotlin.math.abs(yawNoPrev - (-179f)))
     }
 }

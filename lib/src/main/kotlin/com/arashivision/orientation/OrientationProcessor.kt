@@ -1,14 +1,14 @@
 package com.arashivision.orientation
 
 /**
- * Чистая (JVM, без Android) обработка ориентации гироскопа: калибровка,
- * SLERP-сглаживание, относительные углы взгляда (gaze) и целевые yaw/pitch.
+ * Pure (JVM, no Android) gyroscope orientation processing: calibration,
+ * SLERP smoothing, relative gaze angles, and target yaw/pitch.
  *
- * Логика перенесена дословно из GyroOrientationController.onSensorChanged + геттеров.
- * На вход подаётся [SensorOrientation] (native-извлечение делает RotationMatrixMath в :app).
+ * The logic is ported verbatim from GyroOrientationController.onSensorChanged + the getters.
+ * The input is a [SensorOrientation] (the native extraction is done by RotationMatrixMath in :app).
  *
- * @param rateLimitMs минимальный интервал между полными обработками (мс); 0 = без прореживания
- * @param smoothingAlpha коэффициент SLERP
+ * @param rateLimitMs the minimum interval between full processings (ms); 0 = no throttling
+ * @param smoothingAlpha the SLERP coefficient
  */
 class OrientationProcessor(
     private val rateLimitMs: Long = 0L,
@@ -37,11 +37,11 @@ class OrientationProcessor(
     private var smoothedQuaternion = Quaternion(1f, 0f, 0f, 0f)
 
     /**
-     * Обработать кадр. Возвращает true, если кадр обработан полностью (не отсечён
-     * rate-limit'ом). Даже при отсечении raw-значения обновляются (gaze остаётся живым).
+     * Process a frame. Returns true if the frame was processed in full (not throttled
+     * by the rate limit). Even when throttled, the raw values are updated (gaze stays live).
      */
     fun process(orientation: SensorOrientation, displayRotation: Int, now: Long): Boolean {
-        // raw обновляем всегда — gaze не должен застывать между полными обработками
+        // we always update raw — gaze must not freeze between full processings
         currentQuaternion = orientation.quaternion
         lastRawYawDeg = orientation.rawYawDeg
         lastRawPitchDeg = orientation.rawPitchDeg

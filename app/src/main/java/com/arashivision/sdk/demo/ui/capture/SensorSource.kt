@@ -7,17 +7,17 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 
 /**
- * Порт над сенсором поворота. Прячет SensorManager/регистрацию listener'а.
- * Боевая реализация слушает TYPE_ROTATION_VECTOR; в тестах подменяется фейком,
- * который вызывает onValues напрямую.
+ * Port over the rotation sensor. Hides SensorManager / listener registration.
+ * The production implementation listens to TYPE_ROTATION_VECTOR; in tests it is replaced by a fake
+ * that calls onValues directly.
  */
 interface SensorSource {
-    /** Начать слушать. onValues получает event.values (сырой вектор поворота). */
+    /** Start listening. onValues receives event.values (the raw rotation vector). */
     fun start(onValues: (FloatArray) -> Unit)
     fun stop()
 }
 
-/** Боевая реализация на SensorManager (TYPE_ROTATION_VECTOR, SENSOR_DELAY_FASTEST). */
+/** Production implementation on SensorManager (TYPE_ROTATION_VECTOR, SENSOR_DELAY_FASTEST). */
 class AndroidSensorSource(context: Context) : SensorSource {
     private val sensorManager =
         context.getSystemService(Context.SENSOR_SERVICE) as SensorManager

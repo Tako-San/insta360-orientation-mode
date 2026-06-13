@@ -30,9 +30,9 @@ import android.view.Gravity
 import android.view.ViewGroup.MarginLayoutParams
 
 /**
-VrManager — отдельный класс, который включает/выключает VR-режим.
+VrManager is a separate class that turns the VR mode on and off.
 
-Этот класс использует копирование битмапов из правого плеера в ImageView слева.
+This class copies bitmaps from the right player into the left ImageView.
  */
 class VrManager(
     private val activity: Activity,
@@ -505,7 +505,7 @@ class VrManager(
         val sensSeek = SeekBar(activity).apply {
             // map 0..200 -> 0.00..2.00 (0.01 step)
             max = 200
-            progress = ( (getSensitivity() * 100f).toInt() ).coerceIn(0, max) // стартовое положение
+            progress = ( (getSensitivity() * 100f).toInt() ).coerceIn(0, max) // starting position
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         }
 

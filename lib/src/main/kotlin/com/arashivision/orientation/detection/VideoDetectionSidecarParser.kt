@@ -39,7 +39,7 @@ class VideoDetectionSidecarParser {
                 else -> findFramesArray(root)
             }
         } catch (e: Exception) {
-            // «Голая» comma-separated последовательность объектов без обрамляющих [ ].
+            // A "bare" comma-separated sequence of objects without enclosing [ ].
             json.parseToJsonElement("[${jsonText.trimEnd().trimEnd(',')}]").jsonArray
         }
     }

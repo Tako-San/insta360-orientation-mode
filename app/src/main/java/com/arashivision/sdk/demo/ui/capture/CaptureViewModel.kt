@@ -548,7 +548,7 @@ class CaptureViewModel : BaseViewModel(), IPreviewStatusListener, ICaptureStatus
         if (timeLapseWorking) {
             val recordResolution = instaCameraManager.getRecordResolution(CaptureMode.TIMELAPSE)
             val interval = instaCameraManager.getInterval(CaptureMode.TIMELAPSE)
-            // Расчёт длительности готового видео вынесен в :lib (тестируется на JVM).
+            // The finished-video duration calculation is extracted into :lib (tested on the JVM).
             val videoTime = TimelapseMath.videoDurationMs(captureTime, interval.nativeValue, recordResolution.fps)
             emitEvent(CaptureEvent.CameraCaptureEvent(CaptureEvent.CaptureStatus.RECORD_TIME, captureTime, videoTime))
         } else {

@@ -75,7 +75,7 @@ class VideoDetectionSidecarParserTest {
         val late = frameObj.replace("\"frame_idx\": 198", "\"frame_idx\": 10").replace("6.6066", "9.0")
         val early = frameObj.replace("\"frame_idx\": 198", "\"frame_idx\": 20").replace("6.6066", "1.0")
         val sidecar = parser.parse("[$late, $early]")
-        assertEquals(20, sidecar.frames[0].frameIdx) // time 1.0 раньше 9.0
+        assertEquals(20, sidecar.frames[0].frameIdx) // time 1.0 is earlier than 9.0
         assertEquals(10, sidecar.frames[1].frameIdx)
     }
 

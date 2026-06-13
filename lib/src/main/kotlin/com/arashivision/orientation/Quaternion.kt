@@ -8,10 +8,10 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Кватернион (w, x, y, z) — чистая JVM-математика, без Android-зависимостей.
+ * Quaternion (w, x, y, z) — pure JVM math, without Android dependencies.
  */
 data class Quaternion(
-    val w: Float,  // скаляр
+    val w: Float,  // scalar
     val x: Float,  // i
     val y: Float,  // j
     val z: Float   // k
@@ -105,9 +105,9 @@ data class Quaternion(
 
     companion object {
         /**
-         * Конвертирование матрицы ротации 3x3 в кватернион
+         * Convert a 3x3 rotation matrix to a quaternion
          *
-         * Источник: "Quaternion from Rotation Matrix" by S.W. Shepperd
+         * Source: "Quaternion from Rotation Matrix" by S.W. Shepperd
          */
         fun fromRotationMatrix(mat: FloatArray): Quaternion {
             val trace = mat[0] + mat[4] + mat[8]
@@ -121,7 +121,7 @@ data class Quaternion(
                     val z = (mat[3] - mat[1]) * s
                     Quaternion(w, x, y, z)
                 }
-                // m00 — наибольший диагональный элемент
+                // m00 is the largest diagonal element
                 mat[0] > mat[4] && mat[0] > mat[8] -> {
                     val s = 2.0f * sqrt(1.0f + mat[0] - mat[4] - mat[8])
                     val w = (mat[7] - mat[5]) / s  // (m21 - m12) / s
@@ -130,7 +130,7 @@ data class Quaternion(
                     val z = (mat[2] + mat[6]) / s  // (m02 + m20) / s
                     Quaternion(w, x, y, z)
                 }
-                // m11 — наибольший диагональный элемент
+                // m11 is the largest diagonal element
                 mat[4] > mat[8] -> {
                     val s = 2.0f * sqrt(1.0f + mat[4] - mat[0] - mat[8])
                     val w = (mat[2] - mat[6]) / s  // (m02 - m20) / s
@@ -139,7 +139,7 @@ data class Quaternion(
                     val z = (mat[5] + mat[7]) / s  // (m12 + m21) / s
                     Quaternion(w, x, y, z)
                 }
-                // m22 — наибольший диагональный элемент
+                // m22 is the largest diagonal element
                 else -> {
                     val s = 2.0f * sqrt(1.0f + mat[8] - mat[0] - mat[4])
                     val w = (mat[3] - mat[1]) / s  // (m10 - m01) / s
@@ -154,13 +154,13 @@ data class Quaternion(
         }
 
         /**
-         * Сферическая линейная интерполяция (SLERP)
-         * Интерполирует между двумя кватернионами с постоянной угловой скоростью
+         * Spherical linear interpolation (SLERP)
+         * Interpolates between two quaternions at a constant angular velocity
          *
-         * @param q1 Начальный кватернион
-         * @param q2 Конечный кватернион
-         * @param t Параметр интерполяции [0, 1]: 0 = q1, 1 = q2
-         * @return Интерполированный кватернион
+         * @param q1 the start quaternion
+         * @param q2 the end quaternion
+         * @param t the interpolation parameter [0, 1]: 0 = q1, 1 = q2
+         * @return the interpolated quaternion
          */
         fun slerp(q1: Quaternion, q2: Quaternion, t: Float): Quaternion {
             val a = q1.normalize()

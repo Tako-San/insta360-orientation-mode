@@ -6,12 +6,12 @@ import com.elvishew.xlog.XLog
 import java.lang.reflect.Method
 
 /**
- * OrientationSink поверх рефлексии: SDK-вью (InstaCapturePlayerView / SphericalGLSurfaceView)
- * имеют методы setYaw(float)/setPitch(float), недоступные в публичном API. Метод резолвится
- * и кэшируется один раз; отсутствие метода логируется (раньше глоталось молча).
+ * OrientationSink over reflection: SDK views (InstaCapturePlayerView / SphericalGLSurfaceView)
+ * have setYaw(float)/setPitch(float) methods that are not exposed in the public API. The method is resolved
+ * and cached once; a missing method is logged (previously it was swallowed silently).
  *
- * @param target вью-плеер
- * @param yawOffsetDeg добавляется к yaw (для VR-IPD-сдвига)
+ * @param target the player view
+ * @param yawOffsetDeg added to yaw (for the VR IPD offset)
  */
 class ReflectiveOrientationSink(
     private val target: Any,

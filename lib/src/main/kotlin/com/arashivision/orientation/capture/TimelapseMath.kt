@@ -1,22 +1,22 @@
 package com.arashivision.orientation.capture
 
 /**
- * Чистая (JVM) арифметика расчёта длительности готового timelapse-видео.
+ * Pure (JVM) arithmetic for computing the duration of the finished timelapse video.
  *
- * Вынесено из CaptureViewModel.onCaptureTimeChanged ради тестируемости (там оно было
- * вперемешку с вызовами InstaCameraManager). SDK-типы сюда не протекают — на вход идут
- * уже извлечённые intervalNativeValue и fps.
+ * Extracted from CaptureViewModel.onCaptureTimeChanged for testability (there it was
+ * intermixed with InstaCameraManager calls). SDK types do not leak here — the inputs are
+ * the already-extracted intervalNativeValue and fps.
  */
 object TimelapseMath {
     /**
-     * Длительность итогового видео (мс) для timelapse.
+     * The duration of the resulting video (ms) for timelapse.
      *
-     * Формула из исходника: ((captureTimeMs / intervalNativeValue) / fps) * 1000.
-     * Возвращает 0, если interval или fps неположительны (защита от деления на ноль).
+     * Formula from the source: ((captureTimeMs / intervalNativeValue) / fps) * 1000.
+     * Returns 0 if interval or fps are non-positive (guard against division by zero).
      *
-     * @param captureTimeMs прошедшее время съёмки (мс)
-     * @param intervalNativeValue нативное значение интервала кадров
-     * @param fps кадров в секунду у выбранного разрешения
+     * @param captureTimeMs the elapsed capture time (ms)
+     * @param intervalNativeValue the native frame-interval value
+     * @param fps frames per second of the selected resolution
      */
     fun videoDurationMs(captureTimeMs: Long, intervalNativeValue: Int, fps: Int): Long {
         if (intervalNativeValue <= 0 || fps <= 0) return 0L

@@ -5,8 +5,8 @@ import com.arashivision.orientation.panorama.PanoramaDirection
 import com.arashivision.orientation.panorama.PanoramaFovMath
 
 /**
- * Состояние стрелки-указателя на цель: видна ли и под каким экранным углом (рад).
- * visible=false — все цели в поле зрения (или целей нет), стрелку прячем.
+ * State of the arrow pointing at a target: whether it is visible and at what screen angle (rad).
+ * visible=false — all targets are within the field of view (or there are none), hide the arrow.
  */
 data class ArrowState(
     val visible: Boolean,
@@ -18,11 +18,11 @@ data class ArrowState(
 }
 
 /**
- * Чистая (JVM) логика выбора стрелки: по списку детекций кадра и текущему взгляду
- * находит ПЕРВУЮ цель вне поля зрения и возвращает экранный угол стрелки к ней.
- * Если все цели в FOV или детекций нет — [ArrowState.HIDDEN].
+ * Pure (JVM) arrow-selection logic: given the frame's detection list and the current gaze,
+ * finds the FIRST target outside the field of view and returns the screen angle of the arrow to it.
+ * If all targets are within the FOV or there are no detections — [ArrowState.HIDDEN].
  *
- * Извлечено из LocalSphericalPlayerActivity.updateDirectionArrow ради тестируемости.
+ * Extracted from LocalSphericalPlayerActivity.updateDirectionArrow for testability.
  */
 object DetectionArrowResolver {
     fun resolve(

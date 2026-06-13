@@ -17,9 +17,9 @@ class GyroOrientationControllerTest {
 
     @Before
     fun initLog() {
-        // XLog обычно инициализируется в Application; в чистом JVM-тесте инициализируем
-        // его no-op принтером, чтобы logger.d(...) в start/stop/calibrate не падал.
-        // Повторная инициализация бросает IllegalStateException — глотаем.
+        // XLog is usually initialized in Application; in a pure JVM test we initialize
+        // it with a no-op printer so that logger.d(...) in start/stop/calibrate does not crash.
+        // A repeated initialization throws IllegalStateException — we swallow it.
         try {
             XLog.init(LogConfiguration.Builder().build(), Printer { _, _, _ -> })
         } catch (_: IllegalStateException) {
@@ -99,10 +99,10 @@ class GyroOrientationControllerTest {
         c.start()
         src.emit(floatArrayOf(10f))
         c.stop()
-        // после stop источник отвязан — emit ничего не делает (колбэк снят)
+        // after stop the source is detached — emit does nothing (the callback is removed)
         var afterStop = false
-        // повторно подписываемся фейком напрямую отсутствует; просто проверяем, что stop не падает
-        c.stop() // повторный stop безопасен
+        // re-subscribing directly with the fake is absent; we just verify that stop does not crash
+        c.stop() // a repeated stop is safe
         assertTrue(!afterStop)
     }
 
@@ -123,13 +123,13 @@ class GyroOrientationControllerTest {
         val c = controller(src)
         c.start()
         src.emit(floatArrayOf(15f))
-        // геттеры не падают и возвращают согласованные значения
+        // the getters do not crash and return consistent values
         assertEquals(c.getSmoothedYaw(), c.getSmoothedYaw(), 1e-6f)
         assertEquals(15f, c.getGazeYawDeg(), 1e-3f)
         assertEquals(1f, c.getCurrentQuaternion().magnitude(), 1e-3f)
         assertEquals(1f, c.getSmoothedQuaternion().magnitude(), 1e-3f)
         assertEquals(1f, c.getRawCurrentQuaternion().magnitude(), 1e-3f)
-        // raw euler getters доступны
+        // raw euler getters are available
         c.getRawEulerYawDeg(); c.getRawEulerPitchDeg(); c.getSmoothedPitch()
     }
 

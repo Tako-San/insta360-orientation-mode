@@ -3,8 +3,8 @@ package com.arashivision.orientation
 data class TargetOrientation(val yawDeg: Float, val pitchDeg: Float)
 
 /**
- * Чистое преобразование Euler-углов в целевые (yaw, pitch) для плеера:
- * масштаб по чувствительности, инверсия осей, клампинг.
+ * Pure conversion of Euler angles into target (yaw, pitch) for the player:
+ * sensitivity scaling, axis inversion, clamping.
  */
 fun computeTargetOrientation(
     eulerYawDeg: Float,

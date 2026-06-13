@@ -7,12 +7,12 @@ import com.elvishew.xlog.Logger
 import com.elvishew.xlog.XLog
 
 /**
- * Тонкая обвязка: SensorSource → RotationMatrixMath → OrientationProcessor → applyOrientation.
- * Вся математика теперь в pure-JVM OrientationProcessor (:lib), нативные вызовы — в
- * RotationMatrixMath. Здесь только связка и lifecycle.
+ * Thin wiring: SensorSource → RotationMatrixMath → OrientationProcessor → applyOrientation.
+ * All the math now lives in the pure-JVM OrientationProcessor (:lib), the native calls in
+ * RotationMatrixMath. This class only handles the wiring and lifecycle.
  *
- * Конструктор сохраняет совместимость: context/getDisplayRotation/applyOrientation.
- * Опциональные порты подменяются в тестах.
+ * The constructor keeps compatibility: context/getDisplayRotation/applyOrientation.
+ * The optional ports are replaced in tests.
  */
 class GyroOrientationController(
     context: Context,
@@ -22,8 +22,8 @@ class GyroOrientationController(
     private val rotationMath: RotationMatrixMath = AndroidRotationMatrixMath(),
     private val processor: OrientationProcessor = OrientationProcessor()
 ) {
-    // lazy: XLog инициализируется в Application; в чистых JVM-тестах он не нужен и
-    // не должен ронять конструктор (логгер создаётся только при первом логировании).
+    // lazy: XLog is initialized in Application; in pure JVM tests it is not needed and
+    // must not crash the constructor (the logger is created only on the first logging call).
     private val logger: Logger by lazy { XLog.tag(GyroOrientationController::class.java.simpleName).build() }
     private val nowMs: () -> Long = { android.os.SystemClock.elapsedRealtime() }
 
@@ -63,7 +63,7 @@ class GyroOrientationController(
         applyOrientation(processor.smoothedYawDeg(), processor.smoothedPitchDeg())
     }
 
-    // --- API, сохранённый для совместимости с плеером/VR ---
+    // --- API kept for compatibility with the player/VR ---
     fun getRawEulerYawDeg(): Float = processor.rawEulerYawDeg()
     fun getRawEulerPitchDeg(): Float = processor.rawEulerPitchDeg()
     fun getSmoothedYaw(): Float = processor.smoothedYawDeg()

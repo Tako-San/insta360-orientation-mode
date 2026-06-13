@@ -11,14 +11,14 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Robolectric гоняет НАСТОЯЩУЮ нативную математику Android (getRotationMatrixFromVector,
- * remapCoordinateSystem, getOrientation). Точные углы зависят от remap-конвенции, поэтому
- * проверяем СВОЙСТВА обёртки (детерминизм, диапазоны, чувствительность к входу), а не
- * угаданные значения.
+ * Robolectric runs the REAL native Android math (getRotationMatrixFromVector,
+ * remapCoordinateSystem, getOrientation). The exact angles depend on the remap convention, so
+ * we check the PROPERTIES of the wrapper (determinism, ranges, sensitivity to input), not
+ * guessed values.
  *
- * Robolectric 4.13 поддерживает SDK ≤ 34 (проект targetSdk=35) → фиксируем 34.
- * application = Application::class — пустой Application вместо InstaApp, чтобы Robolectric
- * не вызывал InstaMediaSDK.init() с нативной c++_shared (её нет в JVM).
+ * Robolectric 4.13 supports SDK ≤ 34 (the project targetSdk=35) → we pin 34.
+ * application = Application::class — an empty Application instead of InstaApp, so that Robolectric
+ * does not call InstaMediaSDK.init() with the native c++_shared (which is not present on the JVM).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -37,7 +37,7 @@ class AndroidRotationMatrixMathTest {
         assertTrue("yaw in [-180,180]", so.rawYawDeg in -180f..180f)
         assertTrue("pitch in [-180,180]", so.rawPitchDeg in -180f..180f)
         assertTrue("roll in [-180,180]", so.rawRollDeg in -180f..180f)
-        // кватернион нормирован
+        // the quaternion is normalized
         assertEquals(1f, so.quaternion.magnitude(), 1e-3f)
     }
 
@@ -52,8 +52,8 @@ class AndroidRotationMatrixMathTest {
 
     @Test
     fun `different tilt rotations yield different pitch`() {
-        // Наклон вокруг X — живая ось pitch после remap (это подтвердил probe A:
-        // именно сюда «утекает» движение). Разные углы наклона → разный pitch.
+        // Tilt about X is the live pitch axis after the remap (probe A confirmed this:
+        // this is exactly where the motion "leaks"). Different tilt angles → different pitch.
         val a = math.fromRotationVector(quat(1f, 0f, 0f, 20.0), Surface.ROTATION_0)
         val b = math.fromRotationVector(quat(1f, 0f, 0f, 60.0), Surface.ROTATION_0)
         assertNotEquals(a.rawPitchDeg, b.rawPitchDeg)
@@ -61,8 +61,8 @@ class AndroidRotationMatrixMathTest {
 
     @Test
     fun `landscape rotation selects a different pitch component than portrait`() {
-        // В ROTATION_90 pitch берётся из out[2], в ROTATION_0 — из out[1]; для наклона
-        // вокруг X это даёт разные значения pitch (проверяем, что выбор компоненты работает).
+        // In ROTATION_90 pitch is taken from out[2], in ROTATION_0 from out[1]; for a tilt
+        // about X this yields different pitch values (we verify that the component selection works).
         val tilt = quat(1f, 0f, 0f, 40.0)
         val portrait = math.fromRotationVector(tilt.copyOf(), Surface.ROTATION_0)
         val landscape = math.fromRotationVector(tilt.copyOf(), Surface.ROTATION_90)

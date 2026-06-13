@@ -6,25 +6,25 @@ import com.elvishew.xlog.XLog
 import java.lang.reflect.Method
 
 /**
- * Поворот сферы в офлайн-плеере media3 (`SphericalGLSurfaceView`).
+ * Rotates the sphere in the offline media3 player (`SphericalGLSurfaceView`).
  *
- * У media3 `SphericalGLSurfaceView` НЕТ публичных setYaw/setPitch — именно поэтому
- * управление ракурсом по гироскопу никогда не работало в офлайне (старый
- * [ReflectiveOrientationSink] молча падал NoSuchMethodException на несуществующих методах).
+ * media3's `SphericalGLSurfaceView` has NO public setYaw/setPitch — that is exactly why
+ * gyroscope view-direction control never worked offline (the old
+ * [ReflectiveOrientationSink] silently failed with NoSuchMethodException on the missing methods).
  *
- * Реальный объект, который крутит сферу, — приватный GL-рендерер `SphericalGLSurfaceView$Renderer`
- * (хранится в поле `mRenderer` базового `GLSurfaceView`). Он реализует `TouchTracker$Listener`
- * с методом `onScrollChange(PointF)`, где `PointF.x` = yaw (градусы), `PointF.y` = pitch (градусы) —
- * это тот же канал, по которому сфера поворачивается от тача. Метод `synchronized`, поэтому
- * звать его можно с любого потока. Подача наших yaw/pitch из гиро туда поворачивает сферу
- * ровно так же, как ручное «перетаскивание».
+ * The actual object that rotates the sphere is the private GL renderer `SphericalGLSurfaceView$Renderer`
+ * (stored in the `mRenderer` field of the base `GLSurfaceView`). It implements `TouchTracker$Listener`
+ * with the method `onScrollChange(PointF)`, where `PointF.x` = yaw (degrees), `PointF.y` = pitch (degrees) —
+ * this is the same channel through which the sphere is rotated by touch. The method is `synchronized`, so
+ * it can be called from any thread. Feeding our gyro yaw/pitch into it rotates the sphere
+ * exactly the same way as manual "dragging".
  *
- * ВНИМАНИЕ (зонд A, диагностический): это рефлексия в приватный рендерер чужой библиотеки —
- * хрупко, при обновлении media3 может молча сломаться. Используется временно, чтобы проверить,
- * что наша математика гиро корректно крутит сферу и синхронна со стрелкой. Архитектурный
- * финал — свой GL-рендерер панорамы с единым источником ориентации.
+ * WARNING (probe A, diagnostic): this is reflection into a third-party library's private renderer —
+ * fragile, it may silently break when media3 is updated. Used temporarily to verify
+ * that our gyro math rotates the sphere correctly and stays in sync with the arrow. The architectural
+ * end state is our own panorama GL renderer with a single orientation source.
  *
- * @param sphericalView media3 SphericalGLSurfaceView (GLSurfaceView-наследник)
+ * @param sphericalView media3 SphericalGLSurfaceView (a GLSurfaceView subclass)
  */
 class Media3SphericalOrientationSink(
     private val sphericalView: Any,
@@ -41,7 +41,7 @@ class Media3SphericalOrientationSink(
         if (resolved) return
         resolved = true
 
-        // mRenderer объявлен в android.opengl.GLSurfaceView (базовый класс).
+        // mRenderer is declared in android.opengl.GLSurfaceView (the base class).
         val rendererField = try {
             android.opengl.GLSurfaceView::class.java
                 .getDeclaredField("mRenderer")
@@ -67,8 +67,8 @@ class Media3SphericalOrientationSink(
     }
 
     /**
-     * Повернуть сферу к заданным yaw/pitch (градусы). Подаётся в приватный рендерер media3
-     * тем же каналом, что и тач (onScrollChange). pitch media3 клампит к ±45° внутри себя.
+     * Rotate the sphere to the given yaw/pitch (degrees). Fed into the private media3 renderer
+     * through the same channel as touch (onScrollChange). media3 clamps pitch to ±45° internally.
      */
     override fun apply(yawDeg: Float, pitchDeg: Float) {
         resolveOnce()
@@ -77,7 +77,7 @@ class Media3SphericalOrientationSink(
         try {
             point.set(yawDeg, pitchDeg)
             method.invoke(target, point)
-            // Зонд A: периодический лог, чтобы по logcat убедиться, что углы доходят до сферы.
+            // Probe A: periodic log to confirm via logcat that the angles reach the sphere.
             if (applyLogCounter++ % 60 == 0) {
                 logger.d("apply yaw=$yawDeg pitch=$pitchDeg → ${target.javaClass.simpleName}.onScrollChange")
             }

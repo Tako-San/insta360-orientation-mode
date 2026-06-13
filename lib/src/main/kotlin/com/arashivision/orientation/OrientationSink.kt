@@ -1,8 +1,8 @@
 package com.arashivision.orientation
 
 /**
- * Приёмник ориентации панорамы. Реализация применяет (yaw, pitch) к конкретному
- * вью-плееру; вызывающий код не знает деталей (рефлексия SDK прячется в реализации).
+ * Panorama orientation sink. The implementation applies (yaw, pitch) to a concrete
+ * player view; the calling code does not know the details (the SDK reflection is hidden in the implementation).
  */
 interface OrientationSink {
     fun apply(yawDeg: Float, pitchDeg: Float)

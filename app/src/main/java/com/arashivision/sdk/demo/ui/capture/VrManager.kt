@@ -41,7 +41,9 @@ class VrManager(
     private val svCaptureMode: View,
     private val ivCaptureSetting: View,
     private val btnCalibrate: View,
-    private val calibrateGyro: () -> Unit = {}
+    private val calibrateGyro: () -> Unit = {},
+    private val getSensitivity: () -> Float = { 1.2f },
+    private val setSensitivity: (Float) -> Unit = {}
 ) {
     private val logger: Logger = XLog.tag("VrManager").build()
     var isVrMode: Boolean = false
@@ -49,6 +51,7 @@ class VrManager(
     private var vrContainer: ViewGroup? = null
     private var leftVrImage: ImageView? = null
     private var rightVrPlayer: InstaCapturePlayerView? = null
+    private var rightSink: com.arashivision.sdk.demo.ui.player.ReflectiveOrientationSink? = null
     private var reusableBitmap: AndroidBitmap? = null
     private var compositeBitmap: AndroidBitmap? = null
     private val handler = Handler(Looper.getMainLooper())
@@ -242,6 +245,7 @@ class VrManager(
             vrContainer = null
             leftVrImage = null
             rightVrPlayer = null
+            rightSink = null
         }
         try {
             ivCaptureSetting.visibility = View.VISIBLE
@@ -282,23 +286,11 @@ class VrManager(
     fun applyOrientation(yawDeg: Float, pitchDeg: Float) {
         lastYawDeg = yawDeg
         lastPitchDeg = pitchDeg
-        try {
-            rightVrPlayer?.let { obj ->
-                val cls = obj.javaClass
-                try {
-                    val mYaw = cls.getMethod("setYaw", Float::class.javaPrimitiveType)
-                    mYaw.invoke(obj, yawDeg + vrIpdYawDeg)
-                } catch (_: NoSuchMethodException) {
-                }
-                try {
-                    val mPitch = cls.getMethod("setPitch", Float::class.javaPrimitiveType)
-                    mPitch.invoke(obj, pitchDeg)
-                } catch (_: NoSuchMethodException) {
-                }
-            }
-        } catch (e: Exception) {
-            logger.e("applyOrientation -> right player error: ${e.message}")
-        }
+        val player = rightVrPlayer ?: return
+        val sink = rightSink
+            ?: com.arashivision.sdk.demo.ui.player.ReflectiveOrientationSink(player, yawOffsetDeg = vrIpdYawDeg)
+                .also { rightSink = it }
+        sink.apply(yawDeg, pitchDeg)
     }
 
     fun setOrientationSnapshot(yawDeg: Float, pitchDeg: Float) {
@@ -324,8 +316,10 @@ class VrManager(
         stopCopyLoop()
         try {
             rightVrPlayer?.destroy()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            logger.w("destroy rightVrPlayer failed: ${e.message}")
         }
+        rightSink = null
     }
 
     // --------- copy loop (bitmap from right player -> left ImageView) ---------
@@ -502,7 +496,7 @@ class VrManager(
         }
 
         val sensLabel = TextView(activity).apply {
-            val currentSens = GyroOrientationController.sensivity
+            val currentSens = getSensitivity()
             text = "Sensitivity: ${"%.2f".format(currentSens)}"
             val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             lp.topMargin = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8f, activity.resources.displayMetrics).toInt()
@@ -511,7 +505,7 @@ class VrManager(
         val sensSeek = SeekBar(activity).apply {
             // map 0..200 -> 0.00..2.00 (0.01 step)
             max = 200
-            progress = ( (GyroOrientationController.sensivity * 100f).toInt() ).coerceIn(0, max) // стартовое положение
+            progress = ( (getSensitivity() * 100f).toInt() ).coerceIn(0, max) // стартовое положение
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         }
 
@@ -553,7 +547,7 @@ class VrManager(
         sensSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
                 val newSens = progress.toFloat() / 100f
-                GyroOrientationController.sensivity = newSens
+                setSensitivity(newSens)
                 sensLabel.text = "Sensitivity: ${"%.2f".format(newSens)}"
                 applyVrAdjustments()
             }

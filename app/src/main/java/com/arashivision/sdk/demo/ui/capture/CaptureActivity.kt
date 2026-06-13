@@ -38,6 +38,10 @@ class CaptureActivity : BaseActivity<ActivityCaptureBinding, CaptureViewModel>()
 
     private lateinit var vrManager: VrManager
 
+    private val captureSink by lazy {
+        com.arashivision.sdk.demo.ui.player.ReflectiveOrientationSink(binding.capturePlayerView)
+    }
+
     override fun onStop() {
         super.onStop()
         if (isFinishing) viewModel.closePreviewStream()
@@ -79,7 +83,9 @@ class CaptureActivity : BaseActivity<ActivityCaptureBinding, CaptureViewModel>()
             svCaptureMode = binding.svCaptureMode,
             ivCaptureSetting = binding.ivCaptureSetting,
             btnCalibrate = binding.btnCalibrate,
-            calibrateGyro = { try { gyroController.calibrate() } catch (_: Exception) {} }
+            calibrateGyro = { try { gyroController.calibrate() } catch (_: Exception) {} },
+            getSensitivity = { gyroController.sensivity },
+            setSensitivity = { v -> gyroController.sensivity = v }
         )
     }
 
@@ -425,30 +431,11 @@ class CaptureActivity : BaseActivity<ActivityCaptureBinding, CaptureViewModel>()
         }
         if (!pipelinePresent) return
 
-        fun applyTo(obj: Any?, yaw: Float, pitch: Float) {
-            if (obj == null) return
-            try {
-                val cls = obj.javaClass
-                try {
-                    val mYaw = cls.getMethod("setYaw", Float::class.javaPrimitiveType)
-                    mYaw.invoke(obj, yaw)
-                } catch (e: NoSuchMethodException) { /* ignore */ }
-
-                try {
-                    val mPitch = cls.getMethod("setPitch", Float::class.javaPrimitiveType)
-                    mPitch.invoke(obj, pitch)
-                } catch (e: NoSuchMethodException) { /* ignore */ }
-
-            } catch (e: Exception) {
-                logger.e("applyTo error: ${e.message}")
-            }
-        }
-
         try {
             if (vrManager.isVrMode) {
                 vrManager.applyOrientation(yawDeg, pitchDeg)
             } else {
-                applyTo(binding.capturePlayerView, yawDeg, pitchDeg)
+                captureSink.apply(yawDeg, pitchDeg)
             }
         } catch (e: Exception) {
             logger.e("tryApplyOrientationToPlayer error: ${e.message}")

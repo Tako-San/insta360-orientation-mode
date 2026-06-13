@@ -18,7 +18,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
-import com.arashivision.sdk.demo.ui.capture.GyroOrientationController
 import com.elvishew.xlog.XLog
 
 /**
@@ -28,7 +27,9 @@ class LocalVrManager(
     private val activity: Activity,
     private val sourceView: View,
     private val leftEyeImage: ImageView,
-    private val overlaysToHide: List<View>
+    private val overlaysToHide: List<View>,
+    private val getSensitivity: () -> Float = { 1.2f },
+    private val setSensitivity: (Float) -> Unit = {}
 ) {
     private val logger = XLog.tag("LocalVrManager").build()
 
@@ -150,10 +151,10 @@ class LocalVrManager(
             progress = (eyeSpacingPx + maxPx).coerceIn(0, max)
         }
 
-        val sensLabel = TextView(activity).apply { text = "Sensitivity: ${"%.2f".format(GyroOrientationController.sensivity)}" }
+        val sensLabel = TextView(activity).apply { text = "Sensitivity: ${"%.2f".format(getSensitivity())}" }
         val sensSeek = SeekBar(activity).apply {
             max = 200
-            progress = (GyroOrientationController.sensivity * 100f).toInt().coerceIn(0, max)
+            progress = (getSensitivity() * 100f).toInt().coerceIn(0, max)
         }
 
         dialogRoot.addView(scaleLabel)
@@ -191,7 +192,7 @@ class LocalVrManager(
                 sensSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
                         val newSens = progress.toFloat() / 100f
-                        GyroOrientationController.sensivity = newSens
+                        setSensitivity(newSens)
                         sensLabel.text = "Sensitivity: ${"%.2f".format(newSens)}"
                     }
                     override fun onStartTrackingTouch(sb: SeekBar?) = Unit

@@ -244,7 +244,12 @@ holds `instaCameraManager`, `isFetchingOptions`, `isStreamOpened`, `openPreviewS
 - [ ] **Step 2: Run, expect FAIL.**
 - [ ] **Step 3: Implement** — move `startCapture`, `startRecord`, `takePhotos`, `stopRecord`,
   `startLive`, `stopLive`, `switchCaptureMode` verbatim, via adapter; emit same events. `isSingleClickAction`
-  comes from `cameraOfflineData` (passed in).
+  comes from `cameraOfflineData` (passed in). **IMPORTANT — guards live HERE, not in the adapter:**
+  the adapter's `startRecord`/`stopRecord` are dumb SDK executors with no guards. This controller must
+  keep the original VM guards before calling the adapter: `startRecord` does `if (isSingleClickAction) return`
+  then `if (!adapter.isSdCardEnabled) { emit SD_DISABLE; return }`; `stopRecord`/`takePhotos` keep their
+  `isSingleClickAction` guards. The `isLiving` flag also lives here (drives the live start/stop toggle in
+  `startCapture`), set from the `LiveCallbacks` the controller passes to `adapter.startLive`.
 - [ ] **Step 4: Run, expect PASS.**
 - [ ] **Step 5: Commit** — `refactor(capture): extract CaptureControlController (#7) + tests`
 
@@ -278,6 +283,20 @@ holds `instaCameraManager`, `isFetchingOptions`, `isStreamOpened`, `openPreviewS
   `switchCaptureMode`, `startCapture`, `closePreviewStream`, `cameraPreviewStreamParamsChanged`,
   `cameraOfflineData`, `isSingleClickAction`. Each delegates to a controller. `onCleared` →
   `adapter.unregisterListeners()` + `setLockScreen(false)`.
+- [ ] **TRANSITION RISK — single ICameraChangedCallback owner.** Today `CaptureViewModel extends
+  BaseViewModel`, and `BaseViewModel` implements `ICameraChangedCallback` + self-registers via
+  `registerCameraChangedCallback(this)`. The adapter ALSO registers its own `ICameraChangedCallback`
+  in `registerListeners`. If both stay live, `onCameraStatusChanged`/`onCameraPreviewStreamParamsChanged`
+  fire twice. Resolve here: check how `BaseViewModel` registers (read
+  `app/.../base/BaseViewModel.kt`); the slim `CaptureViewModel` must NOT also handle those callbacks —
+  let the adapter be the sole source and route through `CameraCallbacks` (`onWifiDisconnected`,
+  `onPreviewStreamParamsChanged`). If `BaseViewModel`'s registration would double-fire, override/avoid it
+  in the capture VM. Verify on device (logcat) that wifi-disconnect + stream-param-change fire exactly once.
+- [ ] **TRANSITION RISK — preview-open signal.** The adapter delivers BOTH the `openPreviewStream()`
+  suspend result AND `CameraCallbacks.onPreviewOpened/onPreviewError`. The connection controller already
+  awaits the suspend result for its init sequence, so it must NOT also act on `onPreviewOpened` for the
+  same purpose (avoid double-handling). Wire `onPreviewOpened/onPreviewError` only if a controller needs
+  an out-of-band open/error signal; otherwise leave them as no-ops.
 - [ ] **Step 2: Compile** — `:app:compileDebugKotlin` → BUILD SUCCESSFUL.
 - [ ] **Step 3: Commit** — `refactor(capture): CaptureViewModel as thin coordinator over controllers (#7)`
 

@@ -22,6 +22,7 @@ import com.arashivision.sdk.demo.base.BaseEvent
 import com.arashivision.sdk.demo.databinding.ActivityLocalSphericalPlayerBinding
 import com.arashivision.sdk.demo.ui.capture.GyroOrientationController
 import com.arashivision.orientation.PlayerOrientationCoordinator
+import com.arashivision.orientation.detection.DetectionArrowResolver
 import com.arashivision.orientation.detection.VideoDetectionSidecarParser
 import com.arashivision.orientation.detection.VideoDetectionTimeline
 import com.arashivision.orientation.detection.VideoDetectedObject
@@ -302,10 +303,11 @@ class LocalSphericalPlayerActivity :
     }
 
     private fun updateDirectionArrow(detections: List<VideoDetectedObject>) {
-        val firstResult = detections.firstNotNullOfOrNull { detection ->
+        // Отладочный лог по первой детекции (поведение сохранено).
+        detections.firstOrNull()?.let { first ->
             val targetDirection = EquirectangularProjection.fromNormalized(
-                x = detection.centerNorm.x.coerceIn(0.0, 1.0),
-                y = detection.centerNorm.y.coerceIn(0.0, 1.0)
+                x = first.centerNorm.x.coerceIn(0.0, 1.0),
+                y = first.centerNorm.y.coerceIn(0.0, 1.0)
             )
             val result = PanoramaFovMath.resolveTargetQuat(
                 gaze = currentGazeDirection,
@@ -313,14 +315,17 @@ class LocalSphericalPlayerActivity :
                 horizontalFovRad = HORIZONTAL_FOV_RAD,
                 verticalFovRad = VERTICAL_FOV_RAD
             )
-            // Log quaternion debug info for the FIRST detection each tick
-            if (detection === detections.first()) {
-                logQuaternionDebug(detection, targetDirection, result)
-            }
-            result.takeUnless { it.isInsideFov }
+            logQuaternionDebug(first, targetDirection, result)
         }
 
-        val arrowAngleRad = firstResult?.arrowAngleRad
+        // Чистая логика выбора стрелки вынесена в :lib (тестируется на JVM).
+        val arrow = DetectionArrowResolver.resolve(
+            objects = detections,
+            gaze = currentGazeDirection,
+            horizontalFovRad = HORIZONTAL_FOV_RAD,
+            verticalFovRad = VERTICAL_FOV_RAD
+        )
+        val arrowAngleRad = arrow.angleRad
         if (arrowAngleRad == null) {
             binding.directionArrowOverlay.hideArrow()
         } else {

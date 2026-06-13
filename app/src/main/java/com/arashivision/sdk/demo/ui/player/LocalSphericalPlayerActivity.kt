@@ -129,7 +129,7 @@ class LocalSphericalPlayerActivity :
 
         binding.btnVrToggle.setOnClickListener { vrManager.toggleVrMode() }
         binding.btnVrToggle.setOnLongClickListener {
-            vrManager.showVrSettingsDialog()
+            vrManager.openVrSettings()
             true
         }
 
@@ -226,7 +226,7 @@ class LocalSphericalPlayerActivity :
                         gyroController.calibrate()
                         toast(R.string.gyro_recentered)
                     }
-                    "VR: Adjust eyes" -> vrManager.showVrSettingsDialog()
+                    "VR: Adjust eyes" -> vrManager.openVrSettings()
                 }
             }
             .show()

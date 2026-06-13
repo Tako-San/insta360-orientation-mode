@@ -138,7 +138,7 @@ class CaptureActivity : BaseActivity<ActivityCaptureBinding, CaptureViewModel>()
             if (this::vrManager.isInitialized && vrManager.isVrMode && position >= supportCaptureSettingList.size) {
                 try {
                     binding.pickCaptureSetting.hide()
-                    vrManager.showVrSettingsDialog()
+                    vrManager.openVrSettings()
                 } catch (e: Exception) {
                     logger.e("Failed to open VR settings dialog: ${e.message}")
                 }

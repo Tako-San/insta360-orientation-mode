@@ -108,7 +108,9 @@ dependencies {
 
 
 
-    implementation(files("libs/glide_transformations.jar"))
+    implementation(libs.glide.transformations)
+
+    implementation(project(":lib"))
 
     testImplementation("junit:junit:4.13.2")
 

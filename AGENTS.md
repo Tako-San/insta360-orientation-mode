@@ -27,7 +27,7 @@ Read `CLAUDE.md` first — it documents the app architecture thoroughly. This fi
 
 ## Repository & credentials
 
-Insta360 SDK lives on a private Nexus at `http://nexus.arashivision.com:9999/repository/maven-releases/` with `isAllowInsecureProtocol = true` and basic auth `insta360dev` / `50lan123`. SDK version `1.8.1_build_06` via the version catalog (`libs.versions.insta`).
+Insta360 SDK (`sdkcamera`/`sdkmedia`) lives in Insta360's public Maven repo `https://androidsdk.insta360.com/repository/maven-public/` with guest basic auth `insta360guest` / `EXMSjSo8OeOrjU7d` (from the official SDK-demo V1.10.1; hardcoded as fallback in `settings.gradle.kts`, override via `instaNexusUser`/`instaNexusPassword`). The old `nexus.arashivision.com:9999` host is dead. SDK version `1.8.1_build_06` via the version catalog (`libs.versions.insta`).
 
 **Media3 ExoPlayer** (`1.5.1`) is declared directly in `app/build.gradle.kts`, not via the version catalog.
 

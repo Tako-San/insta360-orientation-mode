@@ -3,10 +3,5 @@
 /.idea
 /.kotlin
 /build
-/gradle
-/lib
 /local.properties
-gradlew.bat
-gradle.properties
-settings.gradle.kts
 local.properties

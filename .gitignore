@@ -5,3 +5,7 @@
 /build
 /local.properties
 local.properties
+
+# Release signing keystore — must not be committed
+*.jks
+*.keystore

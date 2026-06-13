@@ -35,19 +35,32 @@ android {
         }
     }
 
+    // Release signing is parameterized via gradle properties / env vars so no keystore
+    // path or password is hardcoded (and works on any OS, not just the author's Windows box):
+    //   signingKeystorePath, signingKeystorePassword, signingKeyAlias, signingKeyPassword
+    // Pass them via -P, ~/.gradle/gradle.properties, or ORG_GRADLE_PROJECT_* env vars.
+    // When the keystore is absent (e.g. debug-only/CI machines), the release config is
+    // simply not registered and assembleRelease is skipped rather than failing.
+    val keystorePath = providers.gradleProperty("signingKeystorePath").orNull
+    val hasReleaseKeystore = keystorePath != null && file(keystorePath).exists()
+
     signingConfigs {
-        create("release") {
-            storeFile = file("G:\\camerasdk\\sdkdemo2\\app\\sdk.jks")
-            storePassword = "insta360"
-            keyAlias = "insta360"
-            keyPassword = "insta360"
+        if (hasReleaseKeystore) {
+            create("release") {
+                storeFile = file(keystorePath!!)
+                storePassword = providers.gradleProperty("signingKeystorePassword").orNull
+                keyAlias = providers.gradleProperty("signingKeyAlias").orNull
+                keyPassword = providers.gradleProperty("signingKeyPassword").orNull
+            }
         }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             )
@@ -85,14 +98,20 @@ android {
 
 kover {
     reports {
-        // Тонкие Android-реализации (Activity, Vr-менеджеры, нативные адаптеры) не
-        // покрываются unit-тестами без устройства/GL — исключаем из отчёта и гейта.
-        // Общий фильтр отчёта/гейта: считаем только вынесенный гиро-код. Тонкие
-        // Android-реализации и UI-классы (без unit-тестов без устройства/GL) исключены.
+        // Гейт считается только по классам с чистой, unit-тестируемой логикой: вынесенный
+        // гиро-контроллер и контроллеры capture (Connection/Control/PreviewParams), которые
+        // покрыты MockK-тестами поверх CameraSDKAdapter. Тонкие Android/SDK-реализации
+        // (Activity, Vr-менеджеры, InstaCameraSDKAdapter, нативные адаптеры) не тестируются
+        // без устройства/GL — они вне include-фильтра.
         // Kover 0.8 не разрешает per-rule filters — фильтр задаётся здесь, на отчёте.
         filters {
             includes {
-                classes("com.arashivision.sdk.demo.ui.capture.GyroOrientationController")
+                classes(
+                    "com.arashivision.sdk.demo.ui.capture.GyroOrientationController",
+                    "com.arashivision.sdk.demo.ui.capture.CaptureConnectionController",
+                    "com.arashivision.sdk.demo.ui.capture.CaptureControlController",
+                    "com.arashivision.sdk.demo.ui.capture.PreviewParamsController",
+                )
             }
         }
         verify {

@@ -1,0 +1,48 @@
+// Module: Player (offline 360 video playback — variant C own GL renderer)
+// Render: dot -Tsvg docs/modules/player.dot -o docs/modules/player.svg
+digraph player {
+    rankdir=TB; fontname="Helvetica"; labelloc=t; fontsize=14;
+    label="Player module  (ui/player)  —  offline 360 playback: own GL renderer + gyro view + detection arrow";
+    node [fontname="Helvetica", shape=box, style="rounded,filled", fillcolor=white, fontsize=11];
+    edge [fontname="Helvetica", fontsize=9, color="#555555"];
+
+    act [label="LocalSphericalPlayerActivity\n(view)", fillcolor="#eef4ff"];
+    vm  [label="LocalSphericalPlayerViewModel", fillcolor="#eef4ff"];
+
+    subgraph cluster_gl {
+        label="Own panorama renderer (variant C — replaced media3 reflection)";
+        style="rounded,filled"; fillcolor="#f7faff"; fontsize=10;
+        glView [label="PanoramaGLSurfaceView\n(Surface for ExoPlayer)"];
+        glRend [label="PanoramaRenderer\nOES texture · shaders · MVP · setOrientation(yaw,pitch)"];
+    }
+
+    arrow [label="DirectionArrowOverlayView\n(off-screen target arrow)", fillcolor="#eef4ff"];
+    sink  [label="ReflectiveOrientationSink\n(online fallback only)", fillcolor="#ffe0b3"];
+
+    subgraph cluster_lib {
+        label=":lib pure logic"; style="rounded,filled"; fillcolor="#eaf7ea"; fontsize=10;
+        node [fillcolor="#d5f0d5"];
+        mesh  [label="panorama/SphereMesh\n+ ViewMatrixMath"];
+        proj  [label="panorama/EquirectangularProjection\n+ PanoramaFovMath"];
+        det   [label="detection/\nSidecarParser · Timeline · ArrowResolver"];
+    }
+
+    exo [label="ExoPlayer (media3)\nfile decode", fillcolor="#dddddd"];
+    gl  [label="OpenGL ES 2", fillcolor="#dddddd"];
+
+    act -> vm;
+    act -> glView;
+    act -> arrow;
+    act -> det [label="load JSON sidecar"];
+    act -> proj [label="FOV / projection of targets"];
+    arrow -> proj [style=dotted];
+    glView -> glRend;
+    glRend -> mesh [label="mesh + view matrix"];
+    glRend -> gl [color="#cc7a00"];
+    glView -> exo [label="SurfaceTexture (OES)", color="#cc7a00"];
+    det -> proj [style=invis];
+
+    note [shape=plaintext, fillcolor=none,
+      label="Gyro drives glRend.setOrientation via OrientationSink (see orientation.dot).\nOffline uses the own renderer; ReflectiveOrientationSink is the online-camera fallback. VR: see vr.dot"];
+    act -> note [style=invis];
+}

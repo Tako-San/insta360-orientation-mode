@@ -1,0 +1,49 @@
+// Module: App chrome (MVVM base + Connect/Main/Setting/Shot screens)
+// Render: dot -Tsvg docs/modules/chrome.dot -o docs/modules/chrome.svg
+digraph chrome {
+    rankdir=TB; fontname="Helvetica"; labelloc=t; fontsize=14;
+    label="App chrome  —  MVVM base classes + connection / browse / settings screens";
+    node [fontname="Helvetica", shape=box, style="rounded,filled", fillcolor=white, fontsize=11];
+    edge [fontname="Helvetica", fontsize=9, color="#555555"];
+
+    // base layer
+    subgraph cluster_base {
+        label="base/  (generic MVVM, reflection-inflated)"; style="rounded,filled"; fillcolor="#f7faff"; fontsize=10;
+        bAct [label="BaseActivity<Binding, VM>"];
+        bFr  [label="BaseFragment<Binding, VM>"];
+        bVM  [label="BaseViewModel\nMutableSharedFlow<BaseEvent>\n+ ICameraChangedCallback"];
+        bEv  [label="BaseEvent", shape=note, fillcolor="#fffceb"];
+        bAd  [label="BaseAdapter / BaseListAdapter"];
+    }
+
+    // screens
+    main   [label="MainActivity\n+ MainViewModel (BottomNav)", fillcolor="#eef4ff"];
+    connect[label="ConnectFragment\n+ ConnectViewModel (USB/WiFi/BLE)", fillcolor="#eef4ff"];
+    setting[label="SettingFragment\n+ SettingViewModel", fillcolor="#eef4ff"];
+    shot   [label="ShotActivity\n+ ShotViewModel (media browse)", fillcolor="#eef4ff"];
+    ble    [label="BleDeviceAdapter", fillcolor="#eef4ff"];
+
+    sdk    [label="InstaCameraManager\n(connect / discover / media)", fillcolor="#dddddd"];
+
+    // inheritance
+    main -> bAct [style=dashed, arrowhead=onormal];
+    shot -> bAct [style=dashed, arrowhead=onormal];
+    connect -> bFr [style=dashed, arrowhead=onormal];
+    setting -> bFr [style=dashed, arrowhead=onormal];
+    main -> bVM [style=dashed, arrowhead=onormal, label="VM extends"];
+    connect -> bVM [style=dashed, arrowhead=onormal];
+    setting -> bVM [style=dashed, arrowhead=onormal];
+    shot -> bVM [style=dashed, arrowhead=onormal];
+    bVM -> bEv [style=dotted, label="emits"];
+    ble -> bAd [style=dashed, arrowhead=onormal];
+    connect -> ble;
+
+    // SDK use (still direct here — these screens were not part of the WP3 port)
+    connect -> sdk [color="#cc7a00", label="connect/discover"];
+    shot -> sdk [color="#cc7a00", label="media list"];
+    bVM -> sdk [color="#cc7a00", label="camera callbacks"];
+
+    note [shape=plaintext, fillcolor=none,
+      label="These screens still call InstaCameraManager directly (not behind a port) — only Capture\nwas refactored in WP3. A future pass could route Connect/Shot through adapters too."];
+    main -> note [style=invis];
+}

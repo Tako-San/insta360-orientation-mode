@@ -1,0 +1,29 @@
+// Module: VR split-screen (stereo via PixelCopy)
+// Render: dot -Tsvg docs/modules/vr.dot -o docs/modules/vr.svg
+digraph vr {
+    rankdir=TB; fontname="Helvetica"; labelloc=t; fontsize=14;
+    label="VR module  —  split-screen stereo; shared base, two thin subclasses (capture vs offline)";
+    node [fontname="Helvetica", shape=box, style="rounded,filled", fillcolor=white, fontsize=11];
+    edge [fontname="Helvetica", fontsize=9, color="#555555"];
+
+    base [label="BaseVrManager\nPixelCopy ~30fps loop · find Surface/Texture\nsettings dialog · applyVrAdjustments", fillcolor="#eef4ff"];
+    cap  [label="VrManager (capture)\n2nd InstaCapturePlayerView (right eye)\nIPD yaw offset", fillcolor="#eef4ff"];
+    loc  [label="LocalVrManager (offline)\nreuse single GL view · alpha-composite left eye", fillcolor="#eef4ff"];
+
+    stereo [label=":lib vr/StereoEyeLayout\neyeScale · spacing · margins (pure geometry)", fillcolor="#d5f0d5"];
+
+    capPlayer [label="InstaCapturePlayerView\n(right-eye, SDK)", fillcolor="#dddddd"];
+    glView    [label="PanoramaGLSurfaceView\n(offline source)", fillcolor="#dddddd"];
+    pixelcopy [label="PixelCopy / TextureView.getBitmap\n(Android)", fillcolor="#dddddd"];
+
+    cap -> base [style=dashed, arrowhead=onormal, label="extends"];
+    loc -> base [style=dashed, arrowhead=onormal, label="extends"];
+    base -> stereo [label="eye geometry"];
+    base -> pixelcopy [label="frame copy → left eye", color="#cc7a00"];
+    cap -> capPlayer [color="#cc7a00"];
+    loc -> glView [color="#cc7a00"];
+
+    note [shape=plaintext, fillcolor=none,
+      label="Dedup (#5): 949→695 LoC. Common copy-loop/dialog/eye-math in BaseVrManager;\nonly the genuine differences (right-eye source) stay in subclasses. Pure geometry tested in :lib."];
+    base -> note [style=invis];
+}

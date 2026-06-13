@@ -1,0 +1,51 @@
+// Module: Capture (live camera preview + capture control) — WP3 god-object split
+// Render: dot -Tsvg docs/modules/capture.dot -o docs/modules/capture.svg
+digraph capture {
+    rankdir=TB; fontname="Helvetica"; labelloc=t; fontsize=14;
+    label="Capture module  (ui/capture)  —  online camera: preview, settings, record/photo/live";
+    node [fontname="Helvetica", shape=box, style="rounded,filled", fillcolor=white, fontsize=11];
+    edge [fontname="Helvetica", fontsize=9, color="#555555"];
+
+    act     [label="CaptureActivity\n(view, event handling)", fillcolor="#eef4ff"];
+    vm      [label="CaptureViewModel\n(thin coordinator, 227 LoC)", fillcolor="#eef4ff"];
+
+    subgraph cluster_ctl {
+        label="Controllers (extracted from god-object)"; style="rounded,filled"; fillcolor="#f7faff"; fontsize=10;
+        conn [label="CaptureConnectionController\ninit · sensor · options · open/close preview · switch mode"];
+        ctrl [label="CaptureControlController\nrecord/photo/live start-stop + guards (SD, single-click)"];
+        pp   [label="PreviewParamsController\nstream-param change · H264/H265 reopen"];
+    }
+
+    evt     [label="CaptureEvent\n(sealed UI events)", shape=note, fillcolor="#fffceb"];
+    modes   [label="CaptureModeAdapter\n(mode picker)", fillcolor="#eef4ff"];
+    text    [label="CaptureText\n(mode/setting → label)", fillcolor="#eef4ff"];
+    dlg     [label="CaptureSettingFlowDialog", fillcolor="#eef4ff"];
+
+    camPort [label="CameraSDKAdapter «port»", fillcolor="#cfe2ff"];
+    camAd   [label="InstaCameraSDKAdapter", fillcolor="#ffe0b3"];
+    plPort  [label="PlayerViewSink «port»", fillcolor="#cfe2ff"];
+    plAd    [label="InstaPlayerViewSink", fillcolor="#ffe0b3"];
+
+    timelapse [label=":lib TimelapseMath\n(video duration)", fillcolor="#d5f0d5"];
+
+    sdk     [label="InstaCameraManager · InstaCapturePlayerView\n(Insta360 SDK)", fillcolor="#dddddd"];
+
+    // wiring
+    act -> vm;
+    act -> modes; act -> dlg; act -> plPort [label="prepare/apply"];
+    act -> evt [style=dotted, label="observes"];
+    vm -> conn; vm -> ctrl; vm -> pp;
+    vm -> camPort; conn -> camPort; ctrl -> camPort; pp -> camPort;
+    pp -> plPort [style=invis];
+    vm -> evt [style=dotted, label="emits"];
+    vm -> timelapse [label="timelapse duration"];
+    modes -> text;
+    camPort -> camAd [style=dashed, arrowhead=onormal, label="impl"];
+    plPort  -> plAd  [style=dashed, arrowhead=onormal, label="impl"];
+    camAd -> sdk [color="#cc7a00"];
+    plAd  -> sdk [color="#cc7a00"];
+
+    note [shape=plaintext, fillcolor=none,
+      label="Gyro (GyroOrientationController) & VR (VrManager) also live here — see orientation.dot / vr.dot"];
+    act -> note [style=invis];
+}

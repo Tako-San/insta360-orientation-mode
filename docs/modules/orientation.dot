@@ -1,0 +1,48 @@
+// Module: Orientation (gyro) + :lib pure math
+// Render: dot -Tsvg docs/modules/orientation.dot -o docs/modules/orientation.svg
+digraph orientation {
+    rankdir=TB; fontname="Helvetica"; labelloc=t; fontsize=14;
+    label="Orientation module  —  one gyro source drives both the panorama view and the direction arrow";
+    node [fontname="Helvetica", shape=box, style="rounded,filled", fillcolor=white, fontsize=11];
+    edge [fontname="Helvetica", fontsize=9, color="#555555"];
+
+    // app glue + ports
+    gyro    [label="GyroOrientationController\n(thin glue, app)", fillcolor="#eef4ff"];
+    sensPort[label="SensorSource «port»", fillcolor="#cfe2ff"];
+    mathPort[label="RotationMatrixMath «port»", fillcolor="#cfe2ff"];
+    sinkPort[label="OrientationSink «port»", fillcolor="#cfe2ff"];
+    sensAd  [label="AndroidSensorSource\n+ AndroidRotationMatrixMath", fillcolor="#ffe0b3"];
+    sensor  [label="SensorManager\nTYPE_ROTATION_VECTOR", fillcolor="#dddddd"];
+
+    // lib pure math
+    subgraph cluster_lib {
+        label=":lib  com.arashivision.orientation  (pure JVM, unit-tested)";
+        style="rounded,filled"; fillcolor="#eaf7ea"; fontsize=10;
+        node [fillcolor="#d5f0d5"];
+        proc   [label="OrientationProcessor\ncalibration · SLERP · gaze yaw/pitch"];
+        quat   [label="Quaternion\nmultiply · conjugate · slerp · toEuler"];
+        smooth [label="OrientationSmoothing\nadaptive low-pass"];
+        sorient[label="SensorOrientation\n(data)"];
+        coord  [label="PlayerOrientationCoordinator\n(sign inversion + smoothing)"];
+    }
+
+    // consumers of the resulting orientation
+    glRend  [label="PanoramaRenderer.setOrientation\n(offline view)", fillcolor="#eef4ff"];
+    arrow   [label="DirectionArrowOverlayView\n(arrow angle)", fillcolor="#eef4ff"];
+
+    gyro -> sensPort -> sensAd [style=dashed, arrowhead=onormal, label="impl"];
+    gyro -> mathPort -> sensAd [style=dashed, arrowhead=onormal];
+    sensAd -> sensor [color="#cc7a00"];
+    mathPort -> sorient [style=dotted, label="produces"];
+    gyro -> proc;
+    proc -> quat; proc -> smooth;
+    proc -> sorient [style=dotted];
+    gyro -> sinkPort;
+    sinkPort -> glRend [label="offline"];
+    sinkPort -> arrow  [label="same gaze → arrow"];
+    coord -> smooth;
+
+    note [shape=plaintext, fillcolor=none,
+      label="Single source of truth: one gaze quaternion rotates the sphere AND points the arrow.\nAll math is in :lib (no Android) and pinned by ~30 unit tests."];
+    gyro -> note [style=invis];
+}

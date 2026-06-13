@@ -1,0 +1,181 @@
+// Architecture of insta360-orientation-mode (Android app)
+// Render:  dot -Tpng docs/architecture.dot -o docs/architecture.png
+//          dot -Tsvg docs/architecture.dot -o docs/architecture.svg
+//
+// Legend:
+//   green  = pure-JVM :lib (no Android/SDK deps, unit-tested ~97%)
+//   blue   = :app ports (interfaces) — the testable seam
+//   orange = :app SDK adapters (the ONLY place Insta360 SDK types live)
+//   grey   = Android framework / Insta360 SDK (external)
+
+digraph insta360_architecture {
+    rankdir=TB;
+    fontname="Helvetica";
+    node [fontname="Helvetica", shape=box, style="rounded,filled", fillcolor=white, fontsize=11];
+    edge [fontname="Helvetica", fontsize=9, color="#555555"];
+    compound=true;
+
+    // ----------------------------------------------------------------
+    //  External: Android framework + Insta360 SDK
+    // ----------------------------------------------------------------
+    subgraph cluster_external {
+        label="External (Android framework + Insta360 SDK)";
+        style="rounded,filled"; fillcolor="#f0f0f0"; fontsize=12;
+        node [fillcolor="#dddddd"];
+
+        sensor      [label="SensorManager\n(TYPE_ROTATION_VECTOR)"];
+        instaMgr    [label="InstaCameraManager\n+ supportConfig\n(camera control, live)"];
+        capPlayer   [label="InstaCapturePlayerView\n(online preview)"];
+        exo         [label="ExoPlayer (media3)\n(offline file decode)"];
+        glsurface   [label="GLSurfaceView / OpenGL ES 2\n(GL_TEXTURE_EXTERNAL_OES)"];
+    }
+
+    // ----------------------------------------------------------------
+    //  :app  — Android UI (MVVM)
+    // ----------------------------------------------------------------
+    subgraph cluster_app {
+        label=":app  (Android, MVVM: BaseActivity<Binding,VM> + MutableSharedFlow<BaseEvent>)";
+        style="rounded,filled"; fillcolor="#eef4ff"; fontsize=12;
+
+        // --- screens (Activities/Fragments) ---
+        subgraph cluster_screens {
+            label="Screens";
+            style="rounded,filled"; fillcolor="#ffffff"; fontsize=10;
+            mainAct   [label="MainActivity\n(BottomNav)"];
+            connect   [label="ConnectFragment\n+ ConnectViewModel\n(USB/WiFi/BLE)"];
+            setting   [label="SettingFragment"];
+            shot      [label="ShotActivity\n(media browse)"];
+            capAct    [label="CaptureActivity\n(live preview + capture)"];
+            playerAct [label="LocalSphericalPlayerActivity\n(offline 360 playback)"];
+        }
+
+        // --- capture mode controllers (WP3) ---
+        subgraph cluster_capvm {
+            label="Capture (god-object split — WP3)";
+            style="rounded,filled"; fillcolor="#ffffff"; fontsize=10;
+            capVM     [label="CaptureViewModel\n(thin coordinator, 227 LoC)"];
+            connCtl   [label="CaptureConnectionController\n(init/sensor/options/preview)"];
+            ctrlCtl   [label="CaptureControlController\n(record/photo/live + guards)"];
+            ppCtl     [label="PreviewParamsController\n(stream-param change)"];
+        }
+
+        // --- ports (the testable seam) ---
+        camPort   [label="CameraSDKAdapter  «port»", fillcolor="#cfe2ff", shape=box];
+        playPort  [label="PlayerViewSink  «port»", fillcolor="#cfe2ff", shape=box];
+        sensPort  [label="SensorSource / RotationMatrixMath  «port»", fillcolor="#cfe2ff", shape=box];
+        sinkPort  [label="OrientationSink  «port»", fillcolor="#cfe2ff", shape=box];
+
+        // --- adapters (SDK lives ONLY here) ---
+        camAdapter [label="InstaCameraSDKAdapter", fillcolor="#ffe0b3"];
+        playSink   [label="InstaPlayerViewSink", fillcolor="#ffe0b3"];
+        sensAdapter[label="AndroidSensorSource\n+ AndroidRotationMatrixMath", fillcolor="#ffe0b3"];
+
+        // --- gyro glue ---
+        gyroCtl   [label="GyroOrientationController\n(thin glue)"];
+
+        // --- own GL renderer (variant C — replaced media3 reflection) ---
+        subgraph cluster_gl {
+            label="Own panorama renderer (variant C)";
+            style="rounded,filled"; fillcolor="#ffffff"; fontsize=10;
+            glView    [label="PanoramaGLSurfaceView"];
+            glRend    [label="PanoramaRenderer\n(OES texture, shaders, MVP)"];
+        }
+
+        // --- VR ---
+        subgraph cluster_vr {
+            label="VR split-screen";
+            style="rounded,filled"; fillcolor="#ffffff"; fontsize=10;
+            baseVr    [label="BaseVrManager\n(PixelCopy ~30fps, settings)"];
+            capVr     [label="VrManager (capture)"];
+            locVr     [label="LocalVrManager (offline)"];
+        }
+
+        arrow     [label="DirectionArrowOverlayView\n(off-screen target arrow)"];
+    }
+
+    // ----------------------------------------------------------------
+    //  :lib  — pure JVM (no Android/SDK), unit-tested
+    // ----------------------------------------------------------------
+    subgraph cluster_lib {
+        label=":lib  com.arashivision.orientation  (pure JVM, ~97% covered)";
+        style="rounded,filled"; fillcolor="#e7f7e7"; fontsize=12;
+        node [fillcolor="#d5f0d5"];
+
+        quat      [label="Quaternion\n(multiply/slerp/conjugate)"];
+        oproc     [label="OrientationProcessor\n(calibration, gaze)"];
+        osmooth   [label="OrientationSmoothing\n(adaptive low-pass)"];
+        pcoord    [label="PlayerOrientationCoordinator"];
+        panorama  [label="panorama/\nSphereMesh · ViewMatrixMath\nEquirectangularProjection · PanoramaFovMath"];
+        detection [label="detection/\nSidecarParser · Timeline · ArrowResolver"];
+        captureL  [label="capture/TimelapseMath"];
+        vrL       [label="vr/StereoEyeLayout"];
+    }
+
+    // ================================================================
+    //  Edges — control / data flow
+    // ================================================================
+
+    // screens own their VMs / managers
+    mainAct -> connect; mainAct -> setting; mainAct -> shot;
+    capAct -> capVM;
+    capAct -> capVr;
+    capAct -> gyroCtl;
+    capAct -> playSink   [label="wraps capturePlayerView"];
+    playerAct -> gyroCtl;
+    playerAct -> glView;
+    playerAct -> locVr;
+    playerAct -> arrow;
+    playerAct -> exo     [label="decode → Surface"];
+
+    // capture VM coordinates controllers
+    capVM -> connCtl; capVM -> ctrlCtl; capVM -> ppCtl;
+
+    // controllers depend ONLY on the port (not the SDK)
+    connCtl -> camPort;
+    ctrlCtl -> camPort;
+    ppCtl   -> camPort;
+    capVM   -> camPort;
+    ppCtl   -> playPort;
+    capAct  -> playPort;
+
+    // ports realized by adapters
+    camAdapter -> camPort   [style=dashed, arrowhead=onormal, label="implements"];
+    playSink   -> playPort  [style=dashed, arrowhead=onormal, label="implements"];
+    sensAdapter-> sensPort  [style=dashed, arrowhead=onormal, label="implements"];
+
+    // adapters are the ONLY bridge to the SDK
+    camAdapter -> instaMgr   [color="#cc7a00"];
+    playSink   -> capPlayer  [color="#cc7a00"];
+    sensAdapter-> sensor     [color="#cc7a00"];
+
+    // gyro glue: port in, lib math, sink out
+    gyroCtl -> sensPort;
+    gyroCtl -> oproc;
+    gyroCtl -> sinkPort;
+    sinkPort -> glView      [style=dashed, label="offline: setOrientation"];
+    sinkPort -> capPlayer   [style=dashed, label="online: reflection"];
+
+    // lib internal use
+    oproc -> quat;
+    oproc -> osmooth;
+    pcoord -> osmooth;
+    panorama -> quat;
+
+    // app consumes lib pure logic
+    gyroCtl -> osmooth      [constraint=false];
+    playerAct -> panorama   [label="FOV / projection"];
+    playerAct -> detection;
+    ppCtl  -> captureL      [label="timelapse duration", constraint=false];
+    capVM  -> captureL      [constraint=false];
+    baseVr -> vrL;
+    glRend -> panorama      [label="mesh / view matrix"];
+
+    // GL renderer wiring
+    glView -> glRend;
+    glRend -> glsurface     [color="#cc7a00"];
+    glView -> exo           [label="SurfaceTexture", color="#cc7a00", constraint=false];
+
+    // VR inheritance
+    capVr -> baseVr [style=dashed, arrowhead=onormal, label="extends"];
+    locVr -> baseVr [style=dashed, arrowhead=onormal, label="extends"];
+}

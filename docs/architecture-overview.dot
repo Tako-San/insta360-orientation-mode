@@ -1,0 +1,48 @@
+// High-level architecture of insta360-orientation-mode
+// Render: dot -Tsvg docs/architecture-overview.dot -o docs/architecture-overview.svg
+
+digraph overview {
+    rankdir=TB;
+    fontname="Helvetica";
+    node [fontname="Helvetica", shape=box, style="rounded,filled", fillcolor=white, fontsize=13, margin="0.25,0.15"];
+    edge [fontname="Helvetica", fontsize=10, color="#555555"];
+
+    // --- Screens ---
+    screens [label="UI Screens\nMain · Connect · Capture · Player · Setting",
+             fillcolor="#eef4ff"];
+
+    // --- App logic (MVVM + controllers) ---
+    logic   [label="App logic  (MVVM)\nViewModels + capture controllers + gyro/VR managers",
+             fillcolor="#eef4ff"];
+
+    // --- Ports: the testable seam ---
+    ports   [label="Ports  (interfaces)\nCameraSDKAdapter · PlayerViewSink · SensorSource",
+             fillcolor="#cfe2ff"];
+
+    // --- Pure logic library ---
+    lib     [label=":lib  — pure logic (no Android/SDK, ~97% tested)\norientation math · panorama geometry · detection · timelapse",
+             fillcolor="#d5f0d5"];
+
+    // --- Adapters: only place SDK types live ---
+    adapters[label="Adapters  (SDK boundary)\nInstaCameraSDKAdapter · InstaPlayerViewSink · own GL renderer",
+             fillcolor="#ffe0b3"];
+
+    // --- External ---
+    external[label="External\nInsta360 SDK (camera/preview) · Android sensors · OpenGL · ExoPlayer",
+             fillcolor="#dddddd"];
+
+    // flow
+    screens -> logic   [label="user actions / events"];
+    logic   -> lib     [label="pure math\n(orientation, FOV, geometry)"];
+    logic   -> ports   [label="depends on\ninterfaces only"];
+    ports   -> adapters[label="implemented by", style=dashed, arrowhead=onormal];
+    adapters -> external [label="the only SDK bridge", color="#cc7a00"];
+
+    // tests hang off the testable layers
+    tests   [label="Unit tests\n(:lib ~95 tests · controllers via MockK ports)",
+             shape=note, fillcolor="#fffceb", fontsize=11];
+    tests -> lib   [style=dotted, arrowhead=none];
+    tests -> ports [style=dotted, arrowhead=none];
+
+    { rank=same; lib; ports; }
+}

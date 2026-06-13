@@ -63,6 +63,8 @@ interface CameraSDKAdapter {
 
     // --- preview-param change (hides AssetInfo/supportConfig/InstaCapturePlayerView reads) ---
     val isPreviewOpened: Boolean
+    /** True when the camera is currently encoding H.265 (mirrors instaCameraManager.isH265StreamEncode). */
+    val isStreamH265: Boolean
     fun isEncodeMismatch(): Boolean
     fun isPreviewFileTypeChanged(mode: CaptureMode, currentFileType: Int): Boolean
     /**

@@ -422,6 +422,9 @@ class InstaCameraSDKAdapter : CameraSDKAdapter {
     override val isPreviewOpened: Boolean
         get() = instaCameraManager.previewStatus == InstaCameraManager.PREVIEW_STATUS_OPENED
 
+    override val isStreamH265: Boolean
+        get() = instaCameraManager.isH265StreamEncode
+
     override fun isEncodeMismatch(): Boolean {
         return isStreamOpened && (instaCameraManager.isH265StreamEncode != (instaCameraManager.videoEncodeType == InstaCameraManager.ENCODE_265))
     }

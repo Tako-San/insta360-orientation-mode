@@ -1,10 +1,13 @@
 package com.arashivision.sdk.demo.ui.capture
 
-import com.arashivision.insta360.basecamera.camera.setting.StreamResolution
+import com.arashivision.insta360.basecamera.camera.setting.StreamResolution as SdkStreamResolution
 import com.arashivision.insta360.basemedia.asset.WindowCropInfo
 import com.arashivision.insta360.basemedia.model.offset.OffsetData
 import com.arashivision.sdk.demo.base.BaseEvent
 import com.arashivision.sdk.demo.base.EventStatus
+import com.arashivision.sdk.demo.ui.capture.camera.CaptureWindowCrop
+import com.arashivision.sdk.demo.ui.capture.camera.PlayerOffsets
+import com.arashivision.sdk.demo.ui.capture.camera.StreamResolution
 import com.arashivision.sdkcamera.camera.model.CaptureMode
 
 interface CaptureEvent : BaseEvent {
@@ -32,11 +35,28 @@ interface CaptureEvent : BaseEvent {
     object RestartPlayerViewEvent : CaptureEvent
 
     class UpdatePlayerViewParamsEvent(
-        var windowCropInfo: WindowCropInfo? = null,
-        var offsetData: OffsetData? = null,
+        var windowCrop: CaptureWindowCrop? = null,
+        var playerOffset: PlayerOffsets? = null,
         var stabOffset: String? = null,
-        var streamResolution: StreamResolution? = null
-    ) : CaptureEvent
+        var resolution: StreamResolution? = null,
+    ) : CaptureEvent {
+        // Bridge constructor: accepts SDK types from CaptureViewModel until Task 6 replaces that call.
+        // TODO Task 6: remove this constructor once the VM no longer calls it.
+        @Suppress("UNUSED_PARAMETER")
+        constructor(
+            windowCropInfo: WindowCropInfo?,
+            offsetData: OffsetData?,
+            stabOffset: String?,
+            streamResolution: SdkStreamResolution?,
+        ) : this(
+            windowCrop = windowCropInfo?.let { w ->
+                CaptureWindowCrop(w.srcWidth, w.srcHeight, w.desWidth, w.desHeight, w.offsetX, w.offsetY)
+            },
+            playerOffset = offsetData?.let { PlayerOffsets(it.offsetV1) },
+            stabOffset = stabOffset,
+            resolution = streamResolution?.let { StreamResolution(it.width, it.height, it.fps) },
+        )
+    }
 
 
     enum class CaptureStatus {
@@ -70,4 +90,3 @@ interface CaptureEvent : BaseEvent {
 
     class CameraLiveEvent(var status: LiveStatus) : CaptureEvent
 }
-

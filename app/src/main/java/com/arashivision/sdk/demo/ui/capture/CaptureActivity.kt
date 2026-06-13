@@ -241,13 +241,20 @@ class CaptureActivity : BaseActivity<ActivityCaptureBinding, CaptureViewModel>()
             CaptureEvent.RestartPlayerViewEvent -> replay()
 
             is CaptureEvent.UpdatePlayerViewParamsEvent -> {
-                if (event.offsetData != null && event.stabOffset != null) {
-                    binding.capturePlayerView.setOffset(event.offsetData, event.stabOffset)
+                // Offset apply (setOffset) requires SDK OffsetData which cannot be reconstructed
+                // from PlayerOffsets.offsetV1 without calling InstaCapturePlayerView.getPlayerOffsetData.
+                // Deferred to Task 7 (PlayerViewSink wraps the real view and holds OffsetData).
+                event.windowCrop?.let { crop ->
+                    binding.capturePlayerView.windowCropInfo = com.arashivision.insta360.basemedia.asset.WindowCropInfo().apply {
+                        srcWidth = crop.srcWidth
+                        srcHeight = crop.srcHeight
+                        desWidth = crop.dstWidth
+                        desHeight = crop.dstHeight
+                        offsetX = crop.offsetX
+                        offsetY = crop.offsetY
+                    }
                 }
-                if (event.windowCropInfo != null) {
-                    binding.capturePlayerView.windowCropInfo = event.windowCropInfo
-                }
-                event.streamResolution?.apply {
+                event.resolution?.apply {
                     binding.capturePlayerView.setPreviewResolution(width, height, fps)
                 }
             }

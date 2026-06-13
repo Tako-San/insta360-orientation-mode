@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kover)
     kotlin("kapt")
 }
 
@@ -72,8 +73,18 @@ android {
         viewBinding = true
     }
 
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
+    }
+
     ndkVersion = "25.2.9519653"
 }
+
+// Kover-гейт покрытия настраивается в Task 8 после готовности :app-тестов.
+// Сейчас включён только сбор отчёта (koverXmlReport).
 
 dependencies {
 
@@ -113,6 +124,10 @@ dependencies {
     implementation(project(":lib"))
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.mockk)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -3,6 +3,10 @@ agp = "8.12.3"
 kotlin = "2.0.21"
 kotlinxSerialization = "1.7.3"
 kover = "0.8.3"
+mockk = "1.13.13"
+robolectric = "4.13"
+coroutinesTest = "1.6.4"
+turbine = "1.1.0"
 insta = "1.8.1_build_06"
 coreKtx = "1.10.1"
 appcompat = "1.6.1"
@@ -51,6 +55,10 @@ flowlayout = { module = "com.hyman:flowlayout-lib", version.ref = "flowlayout" }
 filepicker = { module = "com.github.arteaprogramar:Android-MaterialFilePicker", version.ref = "filepicker" }
 insta-camera = { module = "com.arashivision.sdk:sdkcamera", version.ref = "insta" }
 insta-media = { module = "com.arashivision.sdk:sdkmedia", version.ref = "insta" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutinesTest" }
+turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 androidx-junit = { module = "androidx.test.ext:junit", version.ref = "androidxJunit" }
 androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espresso" }
 

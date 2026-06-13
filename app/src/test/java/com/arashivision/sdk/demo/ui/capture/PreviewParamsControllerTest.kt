@@ -145,7 +145,7 @@ class PreviewParamsControllerTest {
     @Test
     fun `params changed emits UpdatePlayerViewParamsEvent carrying windowCrop and resolution`() = runTest {
         val crop = CaptureWindowCrop(1920, 960, 1920, 960, 0, 0)
-        val offset = PlayerOffsets("v1-offset-string")
+        val offset = PlayerOffsets("v1-offset-string", "", "", "")
         val res = StreamResolution(1920, 960, 30)
         val inputs = PreviewUpdateInputs(
             windowCrop = crop,

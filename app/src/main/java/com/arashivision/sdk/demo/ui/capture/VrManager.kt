@@ -13,6 +13,7 @@ import android.widget.LinearLayout
 import com.arashivision.sdk.demo.ext.instaCameraManager
 import com.arashivision.sdk.demo.ui.player.ReflectiveOrientationSink
 import com.arashivision.sdk.demo.ui.vr.BaseVrManager
+import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilderV2
 import com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView
 import com.arashivision.sdkmedia.player.listener.PlayerViewListener
 
@@ -34,7 +35,13 @@ class VrManager(
     private val btnCalibrate: View,
     private val calibrateGyro: () -> Unit = {},
     getSensitivity: () -> Float = { 1.2f },
-    setSensitivity: (Float) -> Unit = {}
+    setSensitivity: (Float) -> Unit = {},
+    /** Prepares the main capture player (calls PlayerViewSink.prepare()). Used when VR mode
+     *  exits and the main player needs to be re-prepared. */
+    private val preparePlayer: () -> Unit = {},
+    /** Supplies CaptureParamsBuilderV2 for preparing additional players (e.g. the right-eye VR
+     *  player) which are not covered by PlayerViewSink. */
+    private val getPlayerParams: () -> CaptureParamsBuilderV2 = { CaptureParamsBuilderV2() },
 ) : BaseVrManager(activity, getSensitivity, setSensitivity) {
 
     var isVrMode: Boolean = false
@@ -135,8 +142,7 @@ class VrManager(
                 }
             })
             try {
-                val params = (activity as? CaptureActivity)?.viewModel?.getCaptureParams()
-                rightVrPlayer?.prepare(params)
+                rightVrPlayer?.prepare(getPlayerParams())
             } catch (e: Exception) {
                 logError("Unable to obtain capture params to prepare right player", e)
             }
@@ -209,9 +215,7 @@ class VrManager(
             capturePlayerView.visibility = View.VISIBLE
             if (capturePlayerView.pipeline == null) {
                 runCatching {
-                    (activity as? CaptureActivity)?.viewModel?.getCaptureParams()?.let {
-                        capturePlayerView.prepare(it)
-                    }
+                    preparePlayer()
                 }.onFailure { logError("Failed to re-prepare main capturePlayerView", it) }
             }
             capturePlayerView.play()

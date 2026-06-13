@@ -472,7 +472,13 @@ class InstaCameraSDKAdapter : CameraSDKAdapter {
         } else null
 
         val playerOffset = if (shouldUpdateWindowCrop) {
-            PlayerOffsets(InstaCapturePlayerView.getPlayerOffsetData(assetInfo).offsetV1)
+            val od = InstaCapturePlayerView.getPlayerOffsetData(assetInfo)
+            PlayerOffsets(
+                offsetV1 = od.offsetV1 ?: "",
+                offsetV2 = od.offsetV2 ?: "",
+                offsetV3 = od.offsetV3 ?: "",
+                offsetV6 = od.offsetV6 ?: "",
+            )
         } else null
 
         // Check if preview resolution changed

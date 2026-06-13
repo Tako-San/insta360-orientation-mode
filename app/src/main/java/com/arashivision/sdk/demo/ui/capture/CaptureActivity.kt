@@ -22,6 +22,7 @@ import com.arashivision.sdk.demo.view.CaptureShutterButton
 import com.arashivision.sdk.demo.view.discretescrollview.DSVOrientation
 import com.arashivision.sdk.demo.view.discretescrollview.FadingEdgeDecoration
 import com.arashivision.sdk.demo.view.discretescrollview.transform.ScaleTransformer
+import com.arashivision.sdk.demo.ui.capture.player.InstaPlayerViewSink
 import com.arashivision.sdk.demo.view.picker.PickData
 import com.arashivision.sdkcamera.camera.model.CaptureMode
 import com.arashivision.sdkcamera.camera.model.CaptureSetting
@@ -41,6 +42,8 @@ class CaptureActivity : BaseActivity<ActivityCaptureBinding, CaptureViewModel>()
     private val captureSink by lazy {
         com.arashivision.sdk.demo.ui.player.ReflectiveOrientationSink(binding.capturePlayerView)
     }
+
+    private val playerSink by lazy { InstaPlayerViewSink(binding.capturePlayerView) }
 
     override fun onStop() {
         super.onStop()
@@ -85,7 +88,9 @@ class CaptureActivity : BaseActivity<ActivityCaptureBinding, CaptureViewModel>()
             btnCalibrate = binding.btnCalibrate,
             calibrateGyro = { try { gyroController.calibrate() } catch (_: Exception) {} },
             getSensitivity = { gyroController.sensivity },
-            setSensitivity = { v -> gyroController.sensivity = v }
+            setSensitivity = { v -> gyroController.sensivity = v },
+            preparePlayer = { playerSink.prepare() },
+            getPlayerParams = { playerSink.buildParams() },
         )
     }
 
@@ -235,28 +240,17 @@ class CaptureActivity : BaseActivity<ActivityCaptureBinding, CaptureViewModel>()
             }
 
             is CaptureEvent.CameraPreviewStreamParamsChangedEvent -> {
-                viewModel.cameraPreviewStreamParamsChanged(binding.capturePlayerView)
+                viewModel.cameraPreviewStreamParamsChanged(playerSink)
             }
 
             CaptureEvent.RestartPlayerViewEvent -> replay()
 
             is CaptureEvent.UpdatePlayerViewParamsEvent -> {
-                // Offset apply (setOffset) requires SDK OffsetData which cannot be reconstructed
-                // from PlayerOffsets.offsetV1 without calling InstaCapturePlayerView.getPlayerOffsetData.
-                // Deferred to Task 7 (PlayerViewSink wraps the real view and holds OffsetData).
-                event.windowCrop?.let { crop ->
-                    binding.capturePlayerView.windowCropInfo = com.arashivision.insta360.basemedia.asset.WindowCropInfo().apply {
-                        srcWidth = crop.srcWidth
-                        srcHeight = crop.srcHeight
-                        desWidth = crop.dstWidth
-                        desHeight = crop.dstHeight
-                        offsetX = crop.offsetX
-                        offsetY = crop.offsetY
-                    }
+                if (event.playerOffset != null && event.stabOffset != null) {
+                    playerSink.applyOffset(event.playerOffset!!, event.stabOffset!!)
                 }
-                event.resolution?.apply {
-                    binding.capturePlayerView.setPreviewResolution(width, height, fps)
-                }
+                event.windowCrop?.let { playerSink.applyWindowCrop(it) }
+                event.resolution?.let { playerSink.applyResolution(it) }
             }
 
             is CaptureEvent.CameraCaptureEvent -> {
@@ -341,7 +335,7 @@ class CaptureActivity : BaseActivity<ActivityCaptureBinding, CaptureViewModel>()
 
     private fun replay() {
         if (isFinishing || isDestroyed) return
-        binding.capturePlayerView.prepare(viewModel.getCaptureParams())
+        playerSink.prepare()
         binding.capturePlayerView.play()
     }
 
@@ -362,7 +356,7 @@ class CaptureActivity : BaseActivity<ActivityCaptureBinding, CaptureViewModel>()
             }
         })
 
-        binding.capturePlayerView.prepare(viewModel.getCaptureParams())
+        playerSink.prepare()
         binding.capturePlayerView.play()
         binding.capturePlayerView.keepScreenOn = true
     }

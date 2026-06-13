@@ -13,8 +13,14 @@ data class CaptureWindowCrop(
     val offsetX: Int, val offsetY: Int
 )
 
-/** Domain wrapper for player offsets (hides InstaCapturePlayerView.getPlayerOffsetData). */
-data class PlayerOffsets(val offsetV1: String)
+/** Domain wrapper for player offsets; carries the full V1/V2/V3/V6 set so the player sink
+ *  can rebuild an SDK OffsetData identical to InstaCapturePlayerView.getPlayerOffsetData(...). */
+data class PlayerOffsets(
+    val offsetV1: String,
+    val offsetV2: String,
+    val offsetV3: String,
+    val offsetV6: String,
+)
 
 /** Result of a preview-param recomputation; what the player should update. */
 data class PreviewUpdateInputs(

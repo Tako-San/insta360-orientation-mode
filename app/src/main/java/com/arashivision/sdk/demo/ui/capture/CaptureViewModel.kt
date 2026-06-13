@@ -6,14 +6,10 @@ import com.arashivision.sdk.demo.base.BaseViewModel
 import com.arashivision.sdk.demo.capture.CameraOfflineData
 import com.arashivision.sdk.demo.pref.Pref
 import com.arashivision.sdk.demo.ui.capture.camera.CameraCallbacks
-import com.arashivision.sdk.demo.ui.capture.camera.CaptureWindowCrop
 import com.arashivision.sdk.demo.ui.capture.camera.InstaCameraSDKAdapter
-import com.arashivision.sdk.demo.ui.capture.camera.StreamResolution
+import com.arashivision.sdk.demo.ui.capture.player.PlayerViewSink
 import com.arashivision.sdkcamera.camera.model.CaptureMode
 import com.arashivision.sdkcamera.camera.model.CaptureSetting
-import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilderV2
-import com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView
-import com.arashivision.sdkmedia.player.config.InstaStabType
 import com.elvishew.xlog.Logger
 import com.elvishew.xlog.XLog
 
@@ -147,17 +143,6 @@ class CaptureViewModel : BaseViewModel() {
         return adapter.supportValueList(cameraOfflineData.currentCaptureMode, captureSetting)
     }
 
-    /**
-     * Builds the SDK params for [InstaCapturePlayerView.prepare].
-     * Task 7 will relocate this to PlayerViewSink; kept here verbatim so the Activity compiles.
-     */
-    fun getCaptureParams(): CaptureParamsBuilderV2 {
-        return CaptureParamsBuilderV2().apply {
-            this.stabCacheFrameNum = Pref.getStabCacheFrameNum()
-            this.setStabType(InstaStabType.STAB_TYPE_OFF)
-        }
-    }
-
     fun switchCaptureMode(position: Int) {
         connectionController.switchCaptureMode(position, cameraOfflineData)
     }
@@ -171,27 +156,17 @@ class CaptureViewModel : BaseViewModel() {
     }
 
     /**
-     * Reads current player state and delegates to [PreviewParamsController].
-     * The SDK [InstaCapturePlayerView] is read here at the VM boundary;
-     * Task 7's PlayerViewSink will absorb this read.
+     * Reads current player state via [PlayerViewSink] and delegates to [PreviewParamsController].
+     * No SDK player types cross the VM boundary.
      */
-    fun cameraPreviewStreamParamsChanged(playerView: InstaCapturePlayerView) {
-        val mode = cameraOfflineData.currentCaptureMode
-        val currentCrop = playerView.windowCropInfo?.let { w ->
-            CaptureWindowCrop(w.srcWidth, w.srcHeight, w.desWidth, w.desHeight, w.offsetX, w.offsetY)
-        }
-        val currentResolution = StreamResolution(
-            playerView.previewWidth,
-            playerView.previewHeight,
-            playerView.previewFps,
-        )
+    fun cameraPreviewStreamParamsChanged(sink: PlayerViewSink) {
         previewParamsController.cameraPreviewStreamParamsChanged(
-            mode = mode,
-            isPlaying = playerView.isPlaying,
-            currentCrop = currentCrop,
-            currentStabOffset = playerView.stabOffset,
-            currentResolution = currentResolution,
-            currentFileType = playerView.fileType,
+            mode = cameraOfflineData.currentCaptureMode,
+            isPlaying = sink.isPlaying,
+            currentCrop = sink.currentWindowCrop,
+            currentStabOffset = sink.currentStabOffset,
+            currentResolution = sink.currentResolution,
+            currentFileType = sink.currentFileType,
         )
     }
 

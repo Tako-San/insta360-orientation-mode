@@ -42,11 +42,21 @@ is confirmed working: Wi-Fi connect, preview, settings, VR, capture.
   diffing. Emits `RestartPlayerViewEvent`, `CameraPreviewStreamParamsChangedEvent`,
   `UpdatePlayerViewParamsEvent`.
 
+**`:app` `ui/capture/player/` (new — player port):**
+- `PlayerViewSink.kt` — port hiding `InstaCapturePlayerView` behind a narrow interface:
+  `prepareWithCaptureParams()`, `applyOffset(playerOffset, stabOffset)`, `applyWindowCrop(crop)`,
+  `applyResolution(res)`, plus the reads the param-diffing needs (`currentWindowCrop`,
+  `currentStabOffset`, `currentResolution`, `currentFileType`, `isPlaying`). Domain in, domain out
+  — no SDK types in the signatures.
+- `InstaPlayerViewSink.kt` — real impl wrapping the actual `InstaCapturePlayerView`, building
+  `CaptureParamsBuilderV2`/`WindowCropInfo` internally and mapping SDK reads to domain wrappers.
+
 **Modify:**
 - `CaptureViewModel.kt` — slim coordinator: owns `cameraOfflineData`, `isSingleClickAction`,
   wires controllers, re-emits their events, forwards SDK callbacks to controllers.
-- `CaptureActivity.kt` — consume domain wrappers from `UpdatePlayerViewParamsEvent` instead of raw
-  SDK `WindowCropInfo`/`OffsetData` (apply mapping at the view boundary).
+- `CaptureActivity.kt` — consume domain wrappers from `UpdatePlayerViewParamsEvent` and apply them
+  through `InstaPlayerViewSink` (constructed around `binding.capturePlayerView`) instead of touching
+  SDK `WindowCropInfo`/`OffsetData`/`CaptureParamsBuilderV2` directly.
 
 **Tests (`:app` src/test):**
 - `CaptureConnectionControllerTest.kt`, `CaptureControlControllerTest.kt`,
@@ -271,17 +281,51 @@ holds `instaCameraManager`, `isFetchingOptions`, `isStreamOpened`, `openPreviewS
 - [ ] **Step 2: Compile** — `:app:compileDebugKotlin` → BUILD SUCCESSFUL.
 - [ ] **Step 3: Commit** — `refactor(capture): CaptureViewModel as thin coordinator over controllers (#7)`
 
-### Task 7: Move SDK rendering types out of events at the Activity boundary
+### Task 7: `PlayerViewSink` port — confine all SDK player types to one adapter
 
-**Files:** Modify `CaptureActivity.kt`, `CaptureEvent.kt`
+**Files:** Create `app/.../ui/capture/player/PlayerViewSink.kt` +
+`app/.../ui/capture/player/InstaPlayerViewSink.kt`; Modify `CaptureActivity.kt`, `CaptureEvent.kt`
 
-- [ ] **Step 1:** Change `UpdatePlayerViewParamsEvent` to carry the domain wrappers
-  (`CaptureWindowCrop?`, `PlayerOffsets?`, `stabOffset: String?`, `StreamResolution?`) instead of raw
-  SDK `WindowCropInfo`/`OffsetData`. In `CaptureActivity`, map the domain wrappers to the SDK view
-  calls (`binding.capturePlayerView.setOffset(...)`, window-crop) at the point of use — the only
-  place SDK rendering types remain.
-- [ ] **Step 2: Compile** — `:app:compileDebugKotlin` → BUILD SUCCESSFUL.
-- [ ] **Step 3: Commit** — `refactor(capture): events carry domain wrappers, SDK types confined to Activity boundary (#6)`
+The user chose full isolation: the player view's SDK types (`InstaCapturePlayerView`,
+`CaptureParamsBuilderV2`, `WindowCropInfo`, `OffsetData`) must not appear in the VM/controllers/
+events — only inside `InstaPlayerViewSink`.
+
+- [ ] **Step 1: Define the `PlayerViewSink` port** (domain in/out):
+
+```kotlin
+package com.arashivision.sdk.demo.ui.capture.player
+
+import com.arashivision.sdk.demo.ui.capture.camera.CaptureWindowCrop
+import com.arashivision.sdk.demo.ui.capture.camera.PlayerOffsets
+import com.arashivision.sdk.demo.ui.capture.camera.StreamResolution
+
+/** Narrow port over InstaCapturePlayerView; keeps all SDK player types out of the VM layer. */
+interface PlayerViewSink {
+    val isPlaying: Boolean
+    val currentWindowCrop: CaptureWindowCrop?
+    val currentStabOffset: String?
+    val currentResolution: StreamResolution?
+    val currentFileType: Int
+
+    fun prepare()
+    fun applyOffset(playerOffset: PlayerOffsets, stabOffset: String)
+    fun applyWindowCrop(crop: CaptureWindowCrop)
+    fun applyResolution(res: StreamResolution)
+}
+```
+
+- [ ] **Step 2: Implement `InstaPlayerViewSink`** wrapping the real `InstaCapturePlayerView`. Move
+  `getCaptureParams()`'s `CaptureParamsBuilderV2` construction here (`prepare()` calls
+  `view.prepare(builder)`); `applyOffset` → `view.setOffset(offsetData, stabOffset)` where
+  `offsetData` is rebuilt from `PlayerOffsets`; `applyWindowCrop` → builds `WindowCropInfo` (the old
+  `createWindowCropInfo`) and sets `view.windowCropInfo`; `applyResolution` → `view.setPreviewResolution`.
+  Reads map `view.windowCropInfo`/`stabOffset`/`previewWidth..fps`/`fileType` to domain wrappers.
+- [ ] **Step 3:** Change `UpdatePlayerViewParamsEvent` to carry domain wrappers
+  (`CaptureWindowCrop?`, `PlayerOffsets?`, `stabOffset: String?`, `StreamResolution?`). In
+  `CaptureActivity`, construct an `InstaPlayerViewSink(binding.capturePlayerView)` and route the
+  event + `prepare()` through it; no SDK player type is referenced in the Activity event handler.
+- [ ] **Step 4: Compile** — `:app:compileDebugKotlin` → BUILD SUCCESSFUL.
+- [ ] **Step 5: Commit** — `refactor(capture): PlayerViewSink port confines SDK player types (#6)`
 
 ---
 
@@ -316,10 +360,12 @@ JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ANDROID_HOME=/home/farid/android-sd
 - **Type consistency:** `CameraSDKAdapter` method names used identically in adapter impl and
   controllers; domain wrappers (`StreamResolution`, `CaptureWindowCrop`, `PlayerOffsets`,
   `PreviewUpdateInputs`) defined in Task 1, consumed in Tasks 2,5,7.
-- **What is NOT hidden (honest):** `CaptureMode`/`CaptureSetting` stay in signatures (domain enums);
-  `CaptureParamsBuilderV2` from `getCaptureParams()` and `InstaCapturePlayerView` passed to
-  `cameraPreviewStreamParamsChanged` remain SDK types at the Activity/player boundary — fully hiding
-  them would mean wrapping the player view itself, out of scope here.
+- **What is NOT hidden (honest):** `CaptureMode`/`CaptureSetting` stay in signatures (domain enums).
+  The player view IS now wrapped (`PlayerViewSink`, Task 7) per the full-isolation choice, so
+  `CaptureParamsBuilderV2`/`InstaCapturePlayerView`/`WindowCropInfo`/`OffsetData` live only inside
+  `InstaPlayerViewSink` + `InstaCameraSDKAdapter`. The only remaining SDK touchpoint outside the two
+  adapters is constructing `InstaPlayerViewSink(binding.capturePlayerView)` in the Activity (the view
+  is a layout element — it must be owned by the Activity).
 - **Tests caveat:** controllers are unit-testable with a MockK adapter; the adapter impl and the
   online flow are device-verified only (Task 8) — same constraint as the rest of `:app`.
 - **Kover:** controllers live in `ui.capture.*` (already in the `:app` Kover report); the gate

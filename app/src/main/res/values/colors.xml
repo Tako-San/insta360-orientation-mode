@@ -4,9 +4,7 @@
     <color name="transparent">#00000000</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="red">#FF0000</color>
 
-    <color name="press">#4D4D4D</color>
     <color name="unselect">#777777</color>
     <color name="disable">#888888</color>
 

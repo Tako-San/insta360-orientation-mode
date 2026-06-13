@@ -11,10 +11,6 @@
     <string name="slide_up_full_screen">上滑全屏展示</string>
     <string name="slide_down_full_screen">下滑取消全屏</string>
 
-    <string name="dialog_title_remind">特别提醒</string>
-    <string name="dialog_positive_text">确认</string>
-    <string name="dialog_negative_text">取消</string>
-    <string name="unrealized">未实现</string>
 
     <string name="picker_apply_text">应用变更</string>
 
@@ -23,14 +19,10 @@
     <string name="on">开启</string>
 
     <string name="nav_connect">连接</string>
-    <string name="nav_album">相册</string>
-    <string name="nav_ability">功能</string>
-    <string name="nav_setting">设置</string>
 
     <string name="refresh">刷新</string>
     <string name="refresh_failed">刷新失败</string>
 
-    <string name="text_camera_connect_status">连接状态：</string>
     <string name="text_camera_model">相机型号：</string>
     <string name="text_camera_serial">相机序列号：</string>
     <string name="text_camera_fw_version">固件版本：</string>
@@ -93,7 +85,6 @@
 
     <string name="capture_mode_switching">拍摄模式切换中</string>
     <string name="capture_mode_switch_failed">拍摄模式切换失败</string>
-    <string name="capture_taking_photo">拍照中</string>
     <string name="capture_count">%d张</string>
     <string name="capture_preparing">准备中</string>
     <string name="capture_stopping">正在停止</string>
@@ -176,92 +167,23 @@
     <string name="capture_setting_photo_hdr_type_aeb">自动包围曝光</string>
 
 
-    <string name="album_tab_source_camera">相机文件</string>
-    <string name="album_tab_source_local">已下载</string>
-    <string name="album_tab_type_all">全部</string>
-    <string name="album_tab_type_video">视频</string>
-    <string name="album_tab_type_image">照片</string>
 
-    <string name="album_loading_works">正在读取相册文件</string>
-    <string name="album_loading_works_failed">读取相机文件失败</string>
-    <string name="album_deleting_works">正在删除相册文件</string>
-    <string name="album_deleting_works_failed">删除相册文件失败</string>
-    <string name="album_deleting_works_success">删除相册文件成功</string>
-    <string name="album_downloading_works">正在下载第%d个相册文件：%d%%(%s)</string>
-    <string name="album_downloading_works_failed">下载相册文件失败</string>
-    <string name="album_downloading_works_success">下载相册文件成功</string>
-    <string name="album_enum_download">下载</string>
-    <string name="album_enum_delete">删除</string>
-    <string name="album_enum_share">分享</string>
 
     <string name="player_setting_dialog_title">播放设置</string>
     <string name="player_setting_image_fusion">消色差</string>
-    <string name="player_setting_de_purple_filter">去紫边</string>
-    <string name="player_setting_gesture">手势开关</string>
-    <string name="player_setting_render_mode">渲染模式</string>
-    <string name="player_setting_dynamic_stitch">动态拼接</string>
-    <string name="player_setting_denoise">降噪</string>
-    <string name="player_setting_stab_type">防抖类型</string>
-    <string name="player_setting_screen_ratio">屏幕比例</string>
-    <string name="player_setting_preview_mode">预览模式</string>
     <string name="player_setting_offset_type">保护镜类型</string>
-    <string name="player_setting_render_plane">平铺</string>
 
-    <string name="player_setting_export_mode">导出模式</string>
-    <string name="player_setting_export_resolution">分辨率</string>
-    <string name="player_setting_export_fps">帧率</string>
-    <string name="player_setting_export_denoise">降噪</string>
-    <string name="player_setting_export_bitrate">码率</string>
 
-    <string name="export_params_setting_dialog_title">导出参数设置</string>
 
-    <string name="export_dialog_btn_text">确定导出</string>
 
-    <string name="export_original">原始</string>
-    <string name="export_dialog_exporting">正在导出</string>
-    <string name="export_dialog_export_success">导出成功</string>
-    <string name="export_dialog_export_failed">导出失败</string>
-    <string name="export_dialog_export_mode_panorama">全景</string>
-    <string name="export_dialog_export_mode_sphere">球面</string>
 
-    <string name="player_setting_stab_type_panorama">全景防抖</string>
-    <string name="player_setting_stab_type_calibrate_horizon">只矫正地平线</string>
-    <string name="player_setting_stab_type_footage_motion_smooth">镜头运动平滑, 不校准地平线</string>
 
-    <string name="player_setting_offset_type_original">无保护镜</string>
-    <string name="player_setting_offset_type_protector_fasten">卡扣式保护镜拼接</string>
-    <string name="player_setting_offset_type_diving_water">潜水壳水下（旧）</string>
-    <string name="player_setting_offset_type_diving_air">潜水壳水上（旧）</string>
-    <string name="player_setting_offset_type_waterproof">防水壳</string>
-    <string name="player_setting_offset_type_protector_adhere">黏贴式保护镜拼接</string>
-    <string name="player_setting_offset_type_diving_invisible_water">隐形潜水壳水下</string>
-    <string name="player_setting_offset_type_diving_invisible_air">隐形潜水壳水上</string>
-    <string name="player_setting_offset_type_protector_a">保护镜A级（塑料）</string>
-    <string name="player_setting_offset_type_protector_s">保护镜S级（玻璃）</string>
-    <string name="player_setting_offset_type_protector_as_average">A/S平均保护镜</string>
 
-    <string name="player_setting_preview_mode_normal">普通</string>
-    <string name="player_setting_preview_mode_fisheye">鱼眼</string>
-    <string name="player_setting_preview_mode_perspective">透视</string>
 
-    <string name="player_hdr_stitch">HDR合成</string>
-    <string name="player_hdr_stitching">HDR合成中</string>
-    <string name="player_hdr_stitch_failed">HDR合成失败</string>
-    <string name="player_hdr_stitch_success">HDR合成成功</string>
-    <string name="player_hdr_stitch_play">播放HDR</string>
 
-    <string name="player_pure_shot_stitch">PureShot合成</string>
-    <string name="player_pure_shot_stitching">PureShot合成中</string>
-    <string name="player_pure_shot_stitch_failed">PureShot合成失败</string>
-    <string name="player_pure_shot_stitch_success">PureShot合成成功</string>
-    <string name="player_pure_shot_stitch_play">播放PureShot</string>
 
-    <string name="player_show_original_image">显示原图</string>
 
-    <string name="player_video_load_failed">视频加载失败</string>
-    <string name="player_image_load_failed">图片加载失败</string>
 
-    <string name="setting_category_live">直播</string>
 
     <string name="setting_stab_cache_frame_num">防抖缓存帧数</string>
     <string name="setting_input_stab_cache_frame_num">输入防抖缓存帧数</string>
@@ -276,38 +198,14 @@
     <string name="setting_input_live_rtmp">输入RTMP推流地址</string>
     <string name="setting_live_bind_mobile_network">直播时绑定移动网络</string>
 
-    <string name="ability_camera_beep">相机提示音：%s</string>
-    <string name="ability_format_sd_card">格式化SD卡</string>
-    <string name="ability_formatting_sd_card">正在格式化SD卡</string>
-    <string name="ability_format_sd_card_dialog_desc">您确认要格式化您的SD卡吗？</string>
-    <string name="ability_format_sd_card_success">SD卡格式化成功</string>
-    <string name="ability_format_sd_card_failed">SD卡格式化失败</string>
-    <string name="ability_shutdown">关机(仅X5以上支持)</string>
-    <string name="ability_firmware_upgrade">固件升级</string>
-    <string name="ability_export_log">导出日志</string>
-    <string name="ability_connect_camera_first">请先连接相机</string>
-    <string name="ability_fw_upgrade_prompt">注意：固件升级文件后缀名一般是.bin或者.pkg。请不要上传错误文件到相机，以免出现变砖的情况。例：不要上传OneX的固件升级包到OneX2相机。</string>
-    <string name="ability_fw_upgrade_choose_file">请选择固件升级文件</string>
-    <string name="ability_fw_upgrade_file_path">文件路径：%s</string>
-    <string name="ability_fw_upgrade_start_upgrade">开始上传</string>
-    <string name="ability_fw_upgrade_cancel">上传被取消</string>
-    <string name="ability_fw_upgrade_progress">上传进度：%s</string>
-    <string name="ability_fw_upgrade_fail">上传失败，错误码：%1$d，异常信息：%2$s</string>
-    <string name="ability_fw_upgrade_success">上传成功，等待相机升级重启</string>
 
-    <string name="ability_capture_control">拍摄能力</string>
 
-    <string name="ability_active_camera">激活相机</string>
-    <string name="ability_activating_camera">激活中</string>
-    <string name="ability_active_camera_success">激活成功</string>
-    <string name="ability_active_camera_failed">激活失败:%s</string>
 
     <string name="shot_prompt_nanos_osc">注意：Nanos相机不支持此页API，需使用OSC协议控制相机，详情参考OscActivity</string>
     <string name="shot_switch_panorama_sensor">切换至全景镜头</string>
     <string name="shot_select_capture_mode_tip">设置参数时请先选择拍摄模式:</string>
     <string name="shot_capture_time">拍摄时长: %s</string>
     <string name="shot_capture_count">拍摄数量: %d</string>
-    <string name="shot_view_film">查看成片</string>
     <string name="shot_select_capture_mode">选择拍摄模式</string>
     <string name="shot_switching_panorama_sensor_mode">正在切换全景镜头</string>
     <string name="shot_switch_panorama_sensor_mode_success">切换全景镜头成功</string>
@@ -323,6 +221,5 @@
     <string name="shot_capture_stopping">相机正在停止工作</string>
 
     <string name="shot_capture_failed">拍摄失败，错误码：%d</string>
-    <string name="shot_capture_setting">设置拍摄参数</string>
 
 </resources>

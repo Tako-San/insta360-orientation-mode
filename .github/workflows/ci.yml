@@ -23,8 +23,8 @@ jobs:
       # and no dependency on the private Insta360 Nexus (unreachable from the cloud
       # runner). The :app build needs the SDK/Nexus and is verified locally /
       # on a self-hosted runner.
-      - name: Run :lib unit tests with coverage
-        run: ./gradlew :lib:koverXmlReport
+      - name: Run :lib unit tests with coverage gate
+        run: ./gradlew :lib:test :lib:koverVerify :lib:koverXmlReport
 
       - name: Upload test report
         if: always()
@@ -72,6 +72,20 @@ jobs:
       # empty ORG_GRADLE_PROJECT_* shadows the fallback with "" and causes a 401).
       - name: Run :app unit tests with coverage gate
         run: ./gradlew :app:testDebugUnitTest :app:koverVerify :app:koverXmlReport
+
+      # Android lint sits in the same best-effort job because it also pulls the SDK
+      # from the flaky external mirrors; a real lint regression shows here without
+      # blocking on infrastructure 502s.
+      - name: Run Android lint
+        run: ./gradlew :app:lintDebug
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-lint-report
+          path: app/build/reports/lint-results-debug.*
+          if-no-files-found: warn
 
       - name: Upload app test report
         if: always()

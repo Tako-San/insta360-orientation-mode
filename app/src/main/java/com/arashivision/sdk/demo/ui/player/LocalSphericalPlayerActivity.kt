@@ -11,7 +11,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
-import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -49,8 +48,6 @@ class LocalSphericalPlayerActivity :
 
     private val uiHandler = Handler(Looper.getMainLooper())
     private val detectionParser = VideoDetectionSidecarParser()
-    // Probe A: rotate the media3 sphere via its private GL renderer (media3 has no setYaw/setPitch).
-    private val playerSink: OrientationApplier by lazy { Media3SphericalOrientationSink(binding.sphericalView) }
     private var currentGazeDirection: PanoramaDirection = EquirectangularProjection.fromYawPitch(0.0, 0.0)
 
     // Player orientation orchestration (pure logic in :lib, tested on the JVM): sign inversion
@@ -84,10 +81,11 @@ class LocalSphericalPlayerActivity :
     override fun initView() {
         super.initView()
 
-        binding.sphericalView.setDefaultStereoMode(C.STEREO_MODE_MONO)
-        // Disable Media3's built-in sensor rotation — we take full control via
-        // GyroOrientationController so the view direction == our gaze direction exactly.
-        binding.sphericalView.setUseSensorRotation(false)
+        // Own GL renderer (PanoramaGLSurfaceView): attach the ExoPlayer video surface as soon
+        // as the GL texture is ready. No media3 stereo/sensor config — we drive everything.
+        binding.sphericalView.onVideoSurfaceReady = { surface ->
+            player?.setVideoSurface(surface)
+        }
 
         gyroController = GyroOrientationController(
             context = this,
@@ -146,7 +144,9 @@ class LocalSphericalPlayerActivity :
         if (player == null) {
             player = ExoPlayer.Builder(this).build().also { exo ->
                 exo.repeatMode = Player.REPEAT_MODE_ALL
-                exo.setVideoSurfaceView(binding.sphericalView)
+                // Surface comes from our GL view; it may already be ready (set it now) or arrive
+                // later via onVideoSurfaceReady (wired in initView).
+                binding.sphericalView.videoSurface?.let { exo.setVideoSurface(it) }
                 viewModel.currentVideoUri?.let { uri ->
                     exo.setMediaItem(MediaItem.fromUri(uri))
                     exo.prepare()
@@ -182,6 +182,7 @@ class LocalSphericalPlayerActivity :
         uiHandler.removeCallbacks(detectionUpdateRunnable)
         player?.release()
         player = null
+        binding.sphericalView.release()
         super.onStop()
     }
 
@@ -385,13 +386,15 @@ class LocalSphericalPlayerActivity :
         val gazeYawDeg = smoothed.yawDeg
         val gazePitchDeg = smoothed.pitchDeg
 
+        val clampedPitch = gazePitchDeg.coerceIn(-MAX_PITCH_DEG, MAX_PITCH_DEG)
         currentGazeDirection = EquirectangularProjection.fromYawPitch(
             yawRad = Math.toRadians(gazeYawDeg.toDouble()),
-            pitchRad = Math.toRadians(gazePitchDeg.coerceIn(-MAX_PITCH_DEG, MAX_PITCH_DEG).toDouble())
+            pitchRad = Math.toRadians(clampedPitch.toDouble())
         )
 
-        // Rotate the media3 sphere via its private renderer (onScrollChange, degrees).
-        playerSink.apply(gazeYawDeg, gazePitchDeg)
+        // Single source of truth: the same gaze yaw/pitch drive the sphere (our own GL renderer,
+        // no reflection) and the direction arrow (currentGazeDirection above).
+        binding.sphericalView.setOrientation(gazeYawDeg, clampedPitch)
     }
 
     companion object {

@@ -6,7 +6,6 @@ import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import com.arashivision.orientation.panorama.SphereMesh
 import com.arashivision.orientation.panorama.SphereMeshData
-import com.arashivision.orientation.panorama.UnitQuaternion
 import com.arashivision.orientation.panorama.ViewMatrixMath
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -27,7 +26,8 @@ class PanoramaRenderer(
     private val onTextureReady: (Int) -> Unit
 ) : GLSurfaceView.Renderer {
 
-    @Volatile private var orientation: UnitQuaternion = UnitQuaternion.IDENTITY
+    @Volatile private var yawDeg: Float = 0f
+    @Volatile private var pitchDeg: Float = 0f
 
     /** Texture transform from the SurfaceTexture; updated by the view before each draw. */
     @Volatile var stMatrix: FloatArray = FloatArray(16).also { Matrix.setIdentityM(it, 0) }
@@ -52,7 +52,10 @@ class PanoramaRenderer(
     private val view = FloatArray(16)
     private val mvp = FloatArray(16)
 
-    fun setOrientation(q: UnitQuaternion) { orientation = q }
+    fun setOrientation(yawDeg: Float, pitchDeg: Float) {
+        this.yawDeg = yawDeg
+        this.pitchDeg = pitchDeg
+    }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(0f, 0f, 0f, 1f)
@@ -92,7 +95,7 @@ class PanoramaRenderer(
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
         GLES20.glUseProgram(program)
 
-        ViewMatrixMath.viewFromQuaternion(orientation, view)
+        ViewMatrixMath.viewFromYawPitch(yawDeg, pitchDeg, view)
         Matrix.multiplyMM(mvp, 0, projection, 0, view, 0)
         GLES20.glUniformMatrix4fv(uMvp, 1, false, mvp, 0)
         GLES20.glUniformMatrix4fv(uStMatrix, 1, false, stMatrix, 0)

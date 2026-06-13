@@ -24,7 +24,7 @@
             android:scaleType="fitCenter"
             android:visibility="gone" />
 
-        <androidx.media3.exoplayer.video.spherical.SphericalGLSurfaceView
+        <com.arashivision.sdk.demo.ui.player.gl.PanoramaGLSurfaceView
             android:id="@+id/spherical_view"
             android:layout_width="0dp"
             android:layout_height="match_parent"

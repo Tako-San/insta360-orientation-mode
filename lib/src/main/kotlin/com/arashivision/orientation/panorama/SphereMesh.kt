@@ -12,9 +12,14 @@ data class SphereMeshData(
 )
 
 /**
- * Pure (JVM) generator of an inward-facing equirectangular UV sphere. The camera sits at the
- * origin and looks at the inner surface, so the triangle winding is set for inward faces.
- * Coordinate system matches the :lib UnitQuaternion: +X forward, +Y right, +Z up.
+ * Pure (JVM) generator of an inward-facing equirectangular UV sphere in the OpenGL eye basis
+ * (+X right, +Y up, -Z forward), matching [ViewMatrixMath]. The camera sits at the origin and
+ * looks at the inner surface, so the triangle winding is set for inward faces.
+ *
+ * Parameterization: phi is latitude from the top pole (0..PI), theta is longitude (0..2PI).
+ * The top pole (phi=0, V=0) is +Y (up); longitude wraps around the Y axis with forward at -Z.
+ * This puts the equirect image's vertical axis on screen-up and its horizontal axis on the
+ * horizon — no separate roll correction needed.
  */
 object SphereMesh {
     fun generate(stacks: Int = 32, slices: Int = 64, radius: Float = 1f): SphereMeshData {
@@ -24,17 +29,19 @@ object SphereMesh {
         var t = 0
         for (i in 0..stacks) {
             val v = i.toFloat() / stacks          // 0..1 top -> bottom
-            val phi = (v * PI).toFloat()          // polar angle 0..PI
+            val phi = (v * PI).toFloat()          // latitude 0..PI from the +Y pole
             for (j in 0..slices) {
                 val u = j.toFloat() / slices      // 0..1 around
                 val theta = (u * 2.0 * PI).toFloat()
-                // +Z up sphere; longitude around Z, latitude from the +Z pole.
+                // +Y up sphere; longitude around Y, forward at -Z.
                 val sinPhi = sin(phi); val cosPhi = cos(phi)
-                val x = radius * sinPhi * cos(theta)
-                val y = radius * sinPhi * sin(theta)
-                val z = radius * cosPhi
+                val x = radius * sinPhi * sin(theta)
+                val y = radius * cosPhi
+                val z = -radius * sinPhi * cos(theta)
                 positions[p++] = x; positions[p++] = y; positions[p++] = z
-                texCoords[t++] = u; texCoords[t++] = v
+                // V flipped: equirect image top (V=0) is the zenith (+Y pole), but the GL
+                // texture origin is bottom-left, so map the top pole to texture V=1.
+                texCoords[t++] = u; texCoords[t++] = 1f - v
             }
         }
         val indices = ShortArray(stacks * slices * 6)

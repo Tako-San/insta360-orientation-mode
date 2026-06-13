@@ -5,7 +5,6 @@ import android.graphics.SurfaceTexture
 import android.opengl.GLSurfaceView
 import android.util.AttributeSet
 import android.view.Surface
-import com.arashivision.orientation.panorama.UnitQuaternion
 
 /**
  * Own panorama view: a GLSurfaceView that renders an equirectangular sphere via [PanoramaRenderer]
@@ -49,8 +48,9 @@ class PanoramaGLSurfaceView @JvmOverloads constructor(
         post { onVideoSurfaceReady?.invoke(surface) }
     }
 
-    fun setOrientation(q: UnitQuaternion) {
-        renderer.setOrientation(q)
+    /** yaw (look left/right) and pitch (look up/down) in degrees. */
+    fun setOrientation(yawDeg: Float, pitchDeg: Float) {
+        renderer.setOrientation(yawDeg, pitchDeg)
         requestRender()
     }
 

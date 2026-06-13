@@ -41,3 +41,43 @@ jobs:
           name: lib-coverage-report
           path: lib/build/reports/kover/
           if-no-files-found: warn
+
+  app-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # :app unit tests no longer need the Insta360 SDK at test runtime: all sensor
+      # edges sit behind ports (mocked with MockK), and the one Robolectric test uses
+      # an empty Application to skip InstaMediaSDK.init(). The SDK artifact is still
+      # needed at COMPILE time, so the Nexus credentials are passed as secrets.
+      - name: Run :app unit tests with coverage gate
+        run: ./gradlew :app:testDebugUnitTest :app:koverVerify :app:koverXmlReport
+        env:
+          ORG_GRADLE_PROJECT_instaNexusUser: ${{ secrets.INSTA_NEXUS_USER }}
+          ORG_GRADLE_PROJECT_instaNexusPassword: ${{ secrets.INSTA_NEXUS_PASSWORD }}
+
+      - name: Upload app test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-test-report
+          path: app/build/reports/tests/
+          if-no-files-found: warn
+
+      - name: Upload app coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-coverage-report
+          path: app/build/reports/kover/
+          if-no-files-found: warn

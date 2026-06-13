@@ -83,8 +83,25 @@ android {
     ndkVersion = "25.2.9519653"
 }
 
-// Kover-гейт покрытия настраивается в Task 8 после готовности :app-тестов.
-// Сейчас включён только сбор отчёта (koverXmlReport).
+kover {
+    reports {
+        // Тонкие Android-реализации (Activity, Vr-менеджеры, нативные адаптеры) не
+        // покрываются unit-тестами без устройства/GL — исключаем из отчёта и гейта.
+        // Общий фильтр отчёта/гейта: считаем только вынесенный гиро-код. Тонкие
+        // Android-реализации и UI-классы (без unit-тестов без устройства/GL) исключены.
+        // Kover 0.8 не разрешает per-rule filters — фильтр задаётся здесь, на отчёте.
+        filters {
+            includes {
+                classes("com.arashivision.sdk.demo.ui.capture.GyroOrientationController")
+            }
+        }
+        verify {
+            rule {
+                minBound(80)
+            }
+        }
+    }
+}
 
 dependencies {
 

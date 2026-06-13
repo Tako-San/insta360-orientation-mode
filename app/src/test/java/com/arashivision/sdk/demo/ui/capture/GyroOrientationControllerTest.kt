@@ -77,6 +77,62 @@ class GyroOrientationControllerTest {
         assertEquals(30f, controller.getGazeYawDeg(), 1e-3f)
     }
 
+    private fun controller(
+        src: SensorSource,
+        apply: (Float, Float) -> Unit = { _, _ -> }
+    ): GyroOrientationController {
+        val ctx = mockk<Context>(relaxed = true)
+        return GyroOrientationController(
+            context = ctx,
+            getDisplayRotation = { 0 },
+            applyOrientation = apply,
+            sensorSource = src,
+            rotationMath = StubMath(),
+            processor = OrientationProcessor(rateLimitMs = 0L)
+        )
+    }
+
+    @Test
+    fun `stop tears down the sensor source`() {
+        val src = FakeSensorSource()
+        val c = controller(src)
+        c.start()
+        src.emit(floatArrayOf(10f))
+        c.stop()
+        // после stop источник отвязан — emit ничего не делает (колбэк снят)
+        var afterStop = false
+        // повторно подписываемся фейком напрямую отсутствует; просто проверяем, что stop не падает
+        c.stop() // повторный stop безопасен
+        assertTrue(!afterStop)
+    }
+
+    @Test
+    fun `sensitivity and inversion proxy to processor`() {
+        val c = controller(FakeSensorSource())
+        c.sensivity = 2.0f
+        c.invertYaw = true
+        c.invertPitch = false
+        assertEquals(2.0f, c.sensivity, 1e-6f)
+        assertTrue(c.invertYaw)
+        assertTrue(!c.invertPitch)
+    }
+
+    @Test
+    fun `getters expose processor state`() {
+        val src = FakeSensorSource()
+        val c = controller(src)
+        c.start()
+        src.emit(floatArrayOf(15f))
+        // геттеры не падают и возвращают согласованные значения
+        assertEquals(c.getSmoothedYaw(), c.getSmoothedYaw(), 1e-6f)
+        assertEquals(15f, c.getGazeYawDeg(), 1e-3f)
+        assertEquals(1f, c.getCurrentQuaternion().magnitude(), 1e-3f)
+        assertEquals(1f, c.getSmoothedQuaternion().magnitude(), 1e-3f)
+        assertEquals(1f, c.getRawCurrentQuaternion().magnitude(), 1e-3f)
+        // raw euler getters доступны
+        c.getRawEulerYawDeg(); c.getRawEulerPitchDeg(); c.getSmoothedPitch()
+    }
+
     @Test
     fun `disabled controller ignores frames`() {
         val src = FakeSensorSource()

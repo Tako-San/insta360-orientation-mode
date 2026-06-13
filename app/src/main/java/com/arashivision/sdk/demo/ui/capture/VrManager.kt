@@ -2,7 +2,6 @@ package com.arashivision.sdk.demo.ui.capture
 
 import android.app.Activity
 import android.graphics.Color
-import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup

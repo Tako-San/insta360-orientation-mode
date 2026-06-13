@@ -1,7 +1,6 @@
 package com.arashivision.sdk.demo.ui.player
 
 import android.app.Activity
-import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton

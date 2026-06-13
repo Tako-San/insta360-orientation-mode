@@ -21,13 +21,13 @@ import com.arashivision.sdk.demo.base.BaseActivity
 import com.arashivision.sdk.demo.base.BaseEvent
 import com.arashivision.sdk.demo.databinding.ActivityLocalSphericalPlayerBinding
 import com.arashivision.sdk.demo.ui.capture.GyroOrientationController
-import com.arashivision.sdk.demo.ui.player.detection.VideoDetectionSidecarParser
-import com.arashivision.sdk.demo.ui.player.detection.VideoDetectionTimeline
-import com.arashivision.sdk.demo.ui.player.detection.VideoDetectedObject
-import com.arashivision.sdk.demo.ui.player.panorama.EquirectangularProjection
-import com.arashivision.sdk.demo.ui.player.panorama.PanoramaDirection
-import com.arashivision.sdk.demo.ui.player.panorama.PanoramaFovMath
-import com.arashivision.sdk.demo.ui.player.panorama.TargetFovState
+import com.arashivision.orientation.detection.VideoDetectionSidecarParser
+import com.arashivision.orientation.detection.VideoDetectionTimeline
+import com.arashivision.orientation.detection.VideoDetectedObject
+import com.arashivision.orientation.panorama.EquirectangularProjection
+import com.arashivision.orientation.panorama.PanoramaDirection
+import com.arashivision.orientation.panorama.PanoramaFovMath
+import com.arashivision.orientation.panorama.TargetFovState
 import com.elvishew.xlog.XLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -47,7 +47,15 @@ class LocalSphericalPlayerActivity :
 
     private val uiHandler = Handler(Looper.getMainLooper())
     private val detectionParser = VideoDetectionSidecarParser()
+    // Зонд A: поворот сферы media3 через приватный GL-рендерер (setYaw/setPitch у media3 нет).
+    private val playerSink by lazy { Media3SphericalOrientationSink(binding.sphericalView) }
     private var currentGazeDirection: PanoramaDirection = EquirectangularProjection.fromYawPitch(0.0, 0.0)
+
+    // Адаптивное сглаживание подаваемых в сферу углов: давит дрожание датчика на покое,
+    // но почти не сглаживает при быстром повороте (чтобы не вернуть «плывёт»).
+    private var smoothedSphereYaw = 0f
+    private var smoothedSpherePitch = 0f
+    private var sphereSmoothingInitialized = false
     private val detectionUpdateRunnable = object : Runnable {
         override fun run() {
             updateCurrentDetections()
@@ -91,7 +99,9 @@ class LocalSphericalPlayerActivity :
             activity = this,
             sourceView = binding.sphericalView,
             leftEyeImage = binding.vrLeftEye,
-            overlaysToHide = listOf(binding.btnPlayPause, binding.ivCaptureSetting, binding.btnCalibrate)
+            overlaysToHide = listOf(binding.btnPlayPause, binding.ivCaptureSetting, binding.btnCalibrate),
+            getSensitivity = { gyroController.sensivity },
+            setSensitivity = { v -> gyroController.sensivity = v }
         )
         vrManager.onVrModeChanged = { isVrMode ->
             binding.directionArrowOverlay.setVrMode(isVrMode)
@@ -343,7 +353,7 @@ class LocalSphericalPlayerActivity :
             "insideFov=${result.isInsideFov} " +
             "yawDelta=${"%.1f".format(Math.toDegrees(result.yawDeltaRad))}° " +
             "pitchDelta=${"%.1f".format(Math.toDegrees(result.pitchDeltaRad))}° " +
-            "arrowAngle=${if (result.arrowAngleRad != null) "%.1f".format(Math.toDegrees(result.arrowAngleRad)) + "°" else "HIDDEN"}"
+            "arrowAngle=${result.arrowAngleRad?.let { "%.1f".format(Math.toDegrees(it)) + "°" } ?: "HIDDEN"}"
         )
         logger.d(
             "ARROW_QUAT | " +
@@ -361,47 +371,68 @@ class LocalSphericalPlayerActivity :
     private fun tryApplyOrientation(yawDeg: Float, pitchDeg: Float) {
         if (!viewModel.sensorRotationEnabled) return
 
-        // Use the RAW (unscaled) Euler angles from the gyro quaternion for BOTH
-        // the view control (setYaw/setPitch) and the gaze direction. Since we
-        // disabled Media3's built-in sensor, our setYaw/setPitch are the ONLY
-        // source of view rotation — so the view direction == gaze direction exactly.
-        val rawYawDeg = gyroController.getRawEulerYawDeg()
-        val rawPitchDeg = gyroController.getRawEulerPitchDeg()
+        // Калибровочно-относительные углы взгляда из getOrientation (НЕ из кватернионного
+        // toEulerAngles — его yaw сломан по осям: рысканье телефона сидит в оси Y, а
+        // toEulerAngles читает yaw из Z, поэтому кватернионный yaw почти всегда 0).
+        // getGaze* всегда живые и следуют за телефоном.
+        // Оба знака инвертированы: media3 onScrollChange крутит сферу противоположно
+        // повороту телефона (по часовой → картинка против), и pitch перевёрнут.
+        val rawYawDeg = -gyroController.getGazeYawDeg()
+        val rawPitchDeg = -gyroController.getGazePitchDeg()
+
+        // Адаптивный low-pass: сильно сглаживаем мелкие дрожания (покой), почти не
+        // сглаживаем быстрые повороты. delta измеряется в градусах за тик.
+        val gazeYawDeg: Float
+        val gazePitchDeg: Float
+        if (!sphereSmoothingInitialized) {
+            smoothedSphereYaw = rawYawDeg
+            smoothedSpherePitch = rawPitchDeg
+            sphereSmoothingInitialized = true
+            gazeYawDeg = rawYawDeg
+            gazePitchDeg = rawPitchDeg
+        } else {
+            var yawDelta = rawYawDeg - smoothedSphereYaw
+            while (yawDelta > 180f) yawDelta -= 360f
+            while (yawDelta < -180f) yawDelta += 360f
+            val pitchDelta = rawPitchDeg - smoothedSpherePitch
+
+            smoothedSphereYaw += yawDelta * adaptiveAlpha(yawDelta)
+            smoothedSpherePitch += pitchDelta * adaptiveAlpha(pitchDelta)
+            gazeYawDeg = smoothedSphereYaw
+            gazePitchDeg = smoothedSpherePitch
+        }
 
         currentGazeDirection = EquirectangularProjection.fromYawPitch(
-            yawRad = Math.toRadians(rawYawDeg.toDouble()),
-            pitchRad = Math.toRadians(rawPitchDeg.coerceIn(-MAX_PITCH_DEG, MAX_PITCH_DEG).toDouble())
+            yawRad = Math.toRadians(gazeYawDeg.toDouble()),
+            pitchRad = Math.toRadians(gazePitchDeg.coerceIn(-MAX_PITCH_DEG, MAX_PITCH_DEG).toDouble())
         )
 
-        fun applyTo(obj: Any?, yaw: Float, pitch: Float) {
-            if (obj == null) return
-            try {
-                val cls = obj.javaClass
-                runCatching {
-                    cls.getMethod("setYaw", Float::class.javaPrimitiveType).invoke(obj, yaw)
-                }
-                runCatching {
-                    cls.getMethod("setPitch", Float::class.javaPrimitiveType).invoke(obj, pitch)
-                }
-            } catch (e: Exception) {
-                logger.e("Orientation apply failed: ${e.message}")
-            }
-        }
+        // Повернуть сферу media3 через приватный рендерер (onScrollChange, градусы).
+        playerSink.apply(gazeYawDeg, gazePitchDeg)
+    }
 
-        try {
-            // Apply raw Euler angles directly — NOT the tiny sensitivity-scaled
-            // yawDeg/pitchDeg parameters. Since Media3's sensor is disabled, this
-            // is the ONLY rotation source, so view direction == gaze exactly.
-            applyTo(binding.sphericalView, rawYawDeg, rawPitchDeg)
-        } catch (e: Exception) {
-            logger.e("tryApplyOrientation failed: ${e.message}")
-        }
+    /**
+     * Коэффициент сглаживания в зависимости от скорости изменения угла (градусы/тик).
+     * Малая дельта (дрожание датчика на покое) → малая alpha (сильное сглаживание).
+     * Большая дельта (быстрый поворот) → alpha→1 (нет задержки, не «плывёт»).
+     */
+    private fun adaptiveAlpha(deltaDeg: Float): Float {
+        val speed = kotlin.math.abs(deltaDeg)
+        // Линейная интерполяция alpha от MIN (покой) до MAX (быстрое движение)
+        // по мере роста скорости от 0 до SPEED_FULL.
+        val t = (speed / SPEED_FULL_DEG).coerceIn(0f, 1f)
+        return SMOOTH_ALPHA_MIN + (SMOOTH_ALPHA_MAX - SMOOTH_ALPHA_MIN) * t
     }
 
     companion object {
         private val JSON_MIME_TYPES = arrayOf("application/json", "text/json", "text/plain", "application/octet-stream", "*/*")
         private const val DETECTION_UPDATE_INTERVAL_MS = 200L
         private const val MAX_PITCH_DEG = 90f
+
+        // Параметры адаптивного сглаживания углов сферы (см. adaptiveAlpha).
+        private const val SMOOTH_ALPHA_MIN = 0.15f   // покой: сильное сглаживание (давим дрожь)
+        private const val SMOOTH_ALPHA_MAX = 1.0f    // быстрое движение: без задержки
+        private const val SPEED_FULL_DEG = 2.5f      // дельта (°/тик), при которой alpha=MAX
 
         // Adjustable FOV parameters (in radians). The arrow disappears when the target
         // is within these half-angles from the gaze direction.

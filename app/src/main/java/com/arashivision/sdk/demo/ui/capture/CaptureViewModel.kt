@@ -1,6 +1,7 @@
 package com.arashivision.sdk.demo.ui.capture
 
 import androidx.lifecycle.viewModelScope
+import com.arashivision.orientation.capture.TimelapseMath
 import com.arashivision.camera.options.CaptureResolution
 import com.arashivision.graphicpath.render.source.AssetInfo
 import com.arashivision.insta360.basemedia.asset.WindowCropInfo
@@ -547,8 +548,8 @@ class CaptureViewModel : BaseViewModel(), IPreviewStatusListener, ICaptureStatus
         if (timeLapseWorking) {
             val recordResolution = instaCameraManager.getRecordResolution(CaptureMode.TIMELAPSE)
             val interval = instaCameraManager.getInterval(CaptureMode.TIMELAPSE)
-            // 计算成片时长
-            val videoTime = ((captureTime / interval.nativeValue) / recordResolution.fps) * 1000
+            // Расчёт длительности готового видео вынесен в :lib (тестируется на JVM).
+            val videoTime = TimelapseMath.videoDurationMs(captureTime, interval.nativeValue, recordResolution.fps)
             emitEvent(CaptureEvent.CameraCaptureEvent(CaptureEvent.CaptureStatus.RECORD_TIME, captureTime, videoTime))
         } else {
             emitEvent(CaptureEvent.CameraCaptureEvent(CaptureEvent.CaptureStatus.RECORD_TIME, recordTime = captureTime))

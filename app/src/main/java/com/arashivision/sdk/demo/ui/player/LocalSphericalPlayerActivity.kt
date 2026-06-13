@@ -21,6 +21,7 @@ import com.arashivision.sdk.demo.base.BaseActivity
 import com.arashivision.sdk.demo.base.BaseEvent
 import com.arashivision.sdk.demo.databinding.ActivityLocalSphericalPlayerBinding
 import com.arashivision.sdk.demo.ui.capture.GyroOrientationController
+import com.arashivision.orientation.OrientationSmoothing
 import com.arashivision.orientation.detection.VideoDetectionSidecarParser
 import com.arashivision.orientation.detection.VideoDetectionTimeline
 import com.arashivision.orientation.detection.VideoDetectedObject
@@ -51,11 +52,9 @@ class LocalSphericalPlayerActivity :
     private val playerSink by lazy { Media3SphericalOrientationSink(binding.sphericalView) }
     private var currentGazeDirection: PanoramaDirection = EquirectangularProjection.fromYawPitch(0.0, 0.0)
 
-    // Адаптивное сглаживание подаваемых в сферу углов: давит дрожание датчика на покое,
-    // но почти не сглаживает при быстром повороте (чтобы не вернуть «плывёт»).
-    private var smoothedSphereYaw = 0f
-    private var smoothedSpherePitch = 0f
-    private var sphereSmoothingInitialized = false
+    // Адаптивное сглаживание подаваемых в сферу углов (чистая логика в :lib, тестируется на JVM):
+    // давит дрожание датчика на покое, но почти не сглаживает при быстром повороте.
+    private val sphereSmoothing = OrientationSmoothing()
     private val detectionUpdateRunnable = object : Runnable {
         override fun run() {
             updateCurrentDetections()
@@ -380,27 +379,10 @@ class LocalSphericalPlayerActivity :
         val rawYawDeg = -gyroController.getGazeYawDeg()
         val rawPitchDeg = -gyroController.getGazePitchDeg()
 
-        // Адаптивный low-pass: сильно сглаживаем мелкие дрожания (покой), почти не
-        // сглаживаем быстрые повороты. delta измеряется в градусах за тик.
-        val gazeYawDeg: Float
-        val gazePitchDeg: Float
-        if (!sphereSmoothingInitialized) {
-            smoothedSphereYaw = rawYawDeg
-            smoothedSpherePitch = rawPitchDeg
-            sphereSmoothingInitialized = true
-            gazeYawDeg = rawYawDeg
-            gazePitchDeg = rawPitchDeg
-        } else {
-            var yawDelta = rawYawDeg - smoothedSphereYaw
-            while (yawDelta > 180f) yawDelta -= 360f
-            while (yawDelta < -180f) yawDelta += 360f
-            val pitchDelta = rawPitchDeg - smoothedSpherePitch
-
-            smoothedSphereYaw += yawDelta * adaptiveAlpha(yawDelta)
-            smoothedSpherePitch += pitchDelta * adaptiveAlpha(pitchDelta)
-            gazeYawDeg = smoothedSphereYaw
-            gazePitchDeg = smoothedSpherePitch
-        }
+        // Адаптивный low-pass (логика в :lib): давит дрожь на покое, не тормозит при повороте.
+        val smoothed = sphereSmoothing.update(rawYawDeg, rawPitchDeg)
+        val gazeYawDeg = smoothed.yawDeg
+        val gazePitchDeg = smoothed.pitchDeg
 
         currentGazeDirection = EquirectangularProjection.fromYawPitch(
             yawRad = Math.toRadians(gazeYawDeg.toDouble()),
@@ -411,28 +393,10 @@ class LocalSphericalPlayerActivity :
         playerSink.apply(gazeYawDeg, gazePitchDeg)
     }
 
-    /**
-     * Коэффициент сглаживания в зависимости от скорости изменения угла (градусы/тик).
-     * Малая дельта (дрожание датчика на покое) → малая alpha (сильное сглаживание).
-     * Большая дельта (быстрый поворот) → alpha→1 (нет задержки, не «плывёт»).
-     */
-    private fun adaptiveAlpha(deltaDeg: Float): Float {
-        val speed = kotlin.math.abs(deltaDeg)
-        // Линейная интерполяция alpha от MIN (покой) до MAX (быстрое движение)
-        // по мере роста скорости от 0 до SPEED_FULL.
-        val t = (speed / SPEED_FULL_DEG).coerceIn(0f, 1f)
-        return SMOOTH_ALPHA_MIN + (SMOOTH_ALPHA_MAX - SMOOTH_ALPHA_MIN) * t
-    }
-
     companion object {
         private val JSON_MIME_TYPES = arrayOf("application/json", "text/json", "text/plain", "application/octet-stream", "*/*")
         private const val DETECTION_UPDATE_INTERVAL_MS = 200L
         private const val MAX_PITCH_DEG = 90f
-
-        // Параметры адаптивного сглаживания углов сферы (см. adaptiveAlpha).
-        private const val SMOOTH_ALPHA_MIN = 0.15f   // покой: сильное сглаживание (давим дрожь)
-        private const val SMOOTH_ALPHA_MAX = 1.0f    // быстрое движение: без задержки
-        private const val SPEED_FULL_DEG = 2.5f      // дельта (°/тик), при которой alpha=MAX
 
         // Adjustable FOV parameters (in radians). The arrow disappears when the target
         // is within these half-angles from the gaze direction.

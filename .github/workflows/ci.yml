@@ -19,11 +19,12 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # Гоняем только pure-JVM модуль :lib — он не зависит от Android SDK и от
-      # приватного Nexus Insta360 (недоступного из облачного раннера). Сборка :app
-      # требует SDK с Nexus и проверяется локально / на self-hosted runner.
-      - name: Run :lib unit tests
-        run: ./gradlew :lib:test
+      # Only the pure-JVM :lib module runs here — it has no Android SDK dependency
+      # and no dependency on the private Insta360 Nexus (unreachable from the cloud
+      # runner). The :app build needs the SDK/Nexus and is verified locally /
+      # on a self-hosted runner.
+      - name: Run :lib unit tests with coverage
+        run: ./gradlew :lib:koverXmlReport
 
       - name: Upload test report
         if: always()
@@ -31,4 +32,12 @@ jobs:
         with:
           name: lib-test-report
           path: lib/build/reports/tests/
+          if-no-files-found: warn
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lib-coverage-report
+          path: lib/build/reports/kover/
           if-no-files-found: warn

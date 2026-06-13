@@ -2,6 +2,7 @@
 agp = "8.12.3"
 kotlin = "2.0.21"
 kotlinxSerialization = "1.7.3"
+kover = "0.8.3"
 insta = "1.8.1_build_06"
 coreKtx = "1.10.1"
 appcompat = "1.6.1"
@@ -58,3 +59,4 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }

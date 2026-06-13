@@ -1,4 +1,4 @@
-package com.arashivision.sdk.demo.ui.player.panorama
+package com.arashivision.orientation.panorama
 
 import kotlin.math.PI
 import org.junit.Assert.assertEquals

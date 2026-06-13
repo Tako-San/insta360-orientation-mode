@@ -1,4 +1,4 @@
-package com.arashivision.sdk.demo.ui.player.detection
+package com.arashivision.orientation.detection
 
 import kotlin.math.abs
 

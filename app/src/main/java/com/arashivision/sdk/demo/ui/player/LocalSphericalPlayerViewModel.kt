@@ -2,9 +2,9 @@ package com.arashivision.sdk.demo.ui.player
 
 import android.net.Uri
 import com.arashivision.sdk.demo.base.BaseViewModel
-import com.arashivision.sdk.demo.ui.player.detection.VideoDetectionFrame
-import com.arashivision.sdk.demo.ui.player.detection.VideoDetectionTimeline
-import com.arashivision.sdk.demo.ui.player.detection.VideoDetectedObject
+import com.arashivision.orientation.detection.VideoDetectionFrame
+import com.arashivision.orientation.detection.VideoDetectionTimeline
+import com.arashivision.orientation.detection.VideoDetectedObject
 
 class LocalSphericalPlayerViewModel : BaseViewModel() {
 

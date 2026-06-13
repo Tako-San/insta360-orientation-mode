@@ -1,4 +1,4 @@
-package com.arashivision.sdk.demo.ui.player.detection
+package com.arashivision.orientation.detection
 
 /**
  * Parsed sidecar JSON for one panoramic video.

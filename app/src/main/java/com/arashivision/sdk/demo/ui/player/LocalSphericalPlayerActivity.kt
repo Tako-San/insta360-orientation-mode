@@ -21,7 +21,7 @@ import com.arashivision.sdk.demo.base.BaseActivity
 import com.arashivision.sdk.demo.base.BaseEvent
 import com.arashivision.sdk.demo.databinding.ActivityLocalSphericalPlayerBinding
 import com.arashivision.sdk.demo.ui.capture.GyroOrientationController
-import com.arashivision.orientation.OrientationSmoothing
+import com.arashivision.orientation.PlayerOrientationCoordinator
 import com.arashivision.orientation.detection.VideoDetectionSidecarParser
 import com.arashivision.orientation.detection.VideoDetectionTimeline
 import com.arashivision.orientation.detection.VideoDetectedObject
@@ -49,12 +49,12 @@ class LocalSphericalPlayerActivity :
     private val uiHandler = Handler(Looper.getMainLooper())
     private val detectionParser = VideoDetectionSidecarParser()
     // Зонд A: поворот сферы media3 через приватный GL-рендерер (setYaw/setPitch у media3 нет).
-    private val playerSink by lazy { Media3SphericalOrientationSink(binding.sphericalView) }
+    private val playerSink: OrientationApplier by lazy { Media3SphericalOrientationSink(binding.sphericalView) }
     private var currentGazeDirection: PanoramaDirection = EquirectangularProjection.fromYawPitch(0.0, 0.0)
 
-    // Адаптивное сглаживание подаваемых в сферу углов (чистая логика в :lib, тестируется на JVM):
-    // давит дрожание датчика на покое, но почти не сглаживает при быстром повороте.
-    private val sphereSmoothing = OrientationSmoothing()
+    // Оркестрация ориентации плеера (чистая логика в :lib, тестируется на JVM): инверсия
+    // знаков под media3 + адаптивное сглаживание (давит дрожь на покое, не тормозит повороты).
+    private val orientationCoordinator = PlayerOrientationCoordinator()
     private val detectionUpdateRunnable = object : Runnable {
         override fun run() {
             updateCurrentDetections()
@@ -370,17 +370,13 @@ class LocalSphericalPlayerActivity :
     private fun tryApplyOrientation(yawDeg: Float, pitchDeg: Float) {
         if (!viewModel.sensorRotationEnabled) return
 
-        // Калибровочно-относительные углы взгляда из getOrientation (НЕ из кватернионного
-        // toEulerAngles — его yaw сломан по осям: рысканье телефона сидит в оси Y, а
-        // toEulerAngles читает yaw из Z, поэтому кватернионный yaw почти всегда 0).
-        // getGaze* всегда живые и следуют за телефоном.
-        // Оба знака инвертированы: media3 onScrollChange крутит сферу противоположно
-        // повороту телефона (по часовой → картинка против), и pitch перевёрнут.
-        val rawYawDeg = -gyroController.getGazeYawDeg()
-        val rawPitchDeg = -gyroController.getGazePitchDeg()
-
-        // Адаптивный low-pass (логика в :lib): давит дрожь на покое, не тормозит при повороте.
-        val smoothed = sphereSmoothing.update(rawYawDeg, rawPitchDeg)
+        // Координатор (чистая логика :lib) инвертирует знаки под media3 и сглаживает.
+        // Источник — калибровочно-относительные gaze-углы гиро (живые, в отличие от
+        // кватернионного toEulerAngles, чей yaw сломан по осям).
+        val smoothed = orientationCoordinator.coordinate(
+            rawGazeYawDeg = gyroController.getGazeYawDeg(),
+            rawGazePitchDeg = gyroController.getGazePitchDeg()
+        )
         val gazeYawDeg = smoothed.yawDeg
         val gazePitchDeg = smoothed.pitchDeg
 

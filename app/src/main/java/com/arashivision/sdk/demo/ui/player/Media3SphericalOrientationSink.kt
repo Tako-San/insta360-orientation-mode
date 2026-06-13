@@ -29,7 +29,7 @@ import java.lang.reflect.Method
 class Media3SphericalOrientationSink(
     private val sphericalView: Any,
     private val logger: Logger = XLog.tag("Media3OrientationSink").build()
-) {
+) : OrientationApplier {
 
     private var resolved = false
     private var renderer: Any? = null
@@ -70,7 +70,7 @@ class Media3SphericalOrientationSink(
      * Повернуть сферу к заданным yaw/pitch (градусы). Подаётся в приватный рендерер media3
      * тем же каналом, что и тач (onScrollChange). pitch media3 клампит к ±45° внутри себя.
      */
-    fun apply(yawDeg: Float, pitchDeg: Float) {
+    override fun apply(yawDeg: Float, pitchDeg: Float) {
         resolveOnce()
         val method = onScrollChange ?: return
         val target = renderer ?: return

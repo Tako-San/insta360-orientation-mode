@@ -59,12 +59,11 @@ jobs:
       # :app unit tests no longer need the Insta360 SDK at test runtime: all sensor
       # edges sit behind ports (mocked with MockK), and the one Robolectric test uses
       # an empty Application to skip InstaMediaSDK.init(). The SDK artifact is still
-      # needed at COMPILE time, so the Nexus credentials are passed as secrets.
+      # needed at COMPILE time; it resolves via the guest Nexus credentials hardcoded
+      # as a fallback in settings.gradle.kts (do NOT pass empty env vars here — an
+      # empty ORG_GRADLE_PROJECT_* shadows the fallback with "" and causes a 401).
       - name: Run :app unit tests with coverage gate
         run: ./gradlew :app:testDebugUnitTest :app:koverVerify :app:koverXmlReport
-        env:
-          ORG_GRADLE_PROJECT_instaNexusUser: ${{ secrets.INSTA_NEXUS_USER }}
-          ORG_GRADLE_PROJECT_instaNexusPassword: ${{ secrets.INSTA_NEXUS_PASSWORD }}
 
       - name: Upload app test report
         if: always()

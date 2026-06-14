@@ -1,6 +1,7 @@
 package com.panorama.android.sensor
 
 import android.view.Surface
+import com.panorama.core.math.yawPitchOf
 import dev.romainguy.kotlin.math.Quaternion
 import dev.romainguy.kotlin.math.dot
 import dev.romainguy.kotlin.math.normalize
@@ -11,6 +12,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.math.abs
+import kotlin.math.sin
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -55,5 +57,29 @@ class RemapConfigTest {
         // Different remap axes => a genuinely different rotation (|dot| well below 1).
         val similarity = abs(dot(q0, q90))
         assertTrue("ROTATION_90 should differ from ROTATION_0, |dot|=$similarity", similarity < 0.99f)
+    }
+
+    @Test
+    fun `vertical tilt survives the landscape remap as pitch (regression for the AXIS_Z bug)`() {
+        // Physical "nose of the phone tilts up" = a rotation about the device X axis. After remapping
+        // for any display rotation, that tilt must still read as a non-trivial PITCH through the same
+        // forward-vector decomposition the renderer uses (yawPitchOf). The old ROTATION_90/270 remap
+        // fed AXIS_Z into the screen-horizontal slot, which folded forward off -Z and collapsed pitch
+        // to ~0 in landscape -- the "vertical control dead in landscape" device bug. This pins it.
+        val tiltAboutX = rotationVectorAboutX(30f)
+        for (rotation in intArrayOf(Surface.ROTATION_90, Surface.ROTATION_270)) {
+            val q = RemapConfig.fromRotationVector(tiltAboutX, rotation)
+            val (_, pitch) = yawPitchOf(q)
+            assertTrue(
+                "vertical tilt must produce real pitch in landscape rotation=$rotation, got pitch=$pitch",
+                abs(pitch) > 15f,
+            )
+        }
+    }
+
+    /** TYPE_ROTATION_VECTOR sample (3-element) for a pure rotation about device +X, degrees. */
+    private fun rotationVectorAboutX(deg: Float): FloatArray {
+        val half = Math.toRadians(deg.toDouble() / 2.0)
+        return floatArrayOf(sin(half).toFloat(), 0f, 0f)
     }
 }

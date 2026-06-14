@@ -39,9 +39,9 @@ object RemapConfig {
      *  ROTATION_0 is the identity remap (standard portrait convention): a zero rotation vector
      *  maps to the identity orientation. Each 90-degree step rotates the device frame about Z. */
     private fun remapAxes(displayRotation: Int): Pair<Int, Int> = when (displayRotation) {
-        Surface.ROTATION_90 -> SensorManager.AXIS_Z to SensorManager.AXIS_MINUS_X
-        Surface.ROTATION_180 -> SensorManager.AXIS_MINUS_X to SensorManager.AXIS_MINUS_Z
-        Surface.ROTATION_270 -> SensorManager.AXIS_MINUS_Z to SensorManager.AXIS_X
+        Surface.ROTATION_90 -> SensorManager.AXIS_Y to SensorManager.AXIS_MINUS_X
+        Surface.ROTATION_180 -> SensorManager.AXIS_MINUS_X to SensorManager.AXIS_MINUS_Y
+        Surface.ROTATION_270 -> SensorManager.AXIS_MINUS_Y to SensorManager.AXIS_X
         else -> SensorManager.AXIS_X to SensorManager.AXIS_Y // ROTATION_0
     }
 

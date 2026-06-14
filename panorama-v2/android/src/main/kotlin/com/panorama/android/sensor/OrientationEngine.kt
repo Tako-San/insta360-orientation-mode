@@ -2,6 +2,7 @@ package com.panorama.android.sensor
 
 import com.panorama.core.calibration.AxisConvention
 import com.panorama.core.math.GazeState
+import com.panorama.core.math.quatFromYawPitch
 import com.panorama.core.math.yawPitchOf
 import com.panorama.core.orientation.OrientationProcessor
 import com.panorama.core.orientation.OrientationSmoothing
@@ -53,7 +54,12 @@ class OrientationEngine(
      *  Also resets the smoothing filter and the dt clock so the gaze snaps to identity at the new
      *  zero instead of easing in from the pre-calibration orientation. */
     fun calibrate() {
-        processor.calibrate(lastRaw)
+        // Re-zero heading only: project lastRaw onto its yaw so a rolled/pitched hold cannot tilt
+        // the yaw/pitch basis. The body-frame rebasing in OrientationProcessor (inverse(ref)*current)
+        // rotates the (yaw, pitch) plane by the reference's roll, so a raw lastRaw with any roll would
+        // bleed a horizontal pan into pitch. quatFromYawPitch is roll-free by construction.
+        val (yaw, _) = yawPitchOf(lastRaw)
+        processor.calibrate(quatFromYawPitch(yaw, 0f))
         smoothing = OrientationSmoothing()
         lastTimestampNs = 0L
     }

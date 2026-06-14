@@ -2,6 +2,7 @@ package com.panorama.android.media
 
 import android.content.Context
 import android.net.Uri
+import android.os.Handler
 import android.view.Surface
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -54,8 +55,18 @@ class ExoVideoPlayer(private val player: Player) {
 
     fun seekTo(positionMs: Long) = player.seekTo(positionMs)
 
-    /** Attaches (or, with null, detaches) the video output [Surface]. */
-    fun setVideoSurface(surface: Surface?) = player.setVideoSurface(surface)
+    /** Attaches (or, with null, detaches) the video output [Surface].
+     *  The surface becomes ready on the GL thread, but media3 [Player] is single-thread-affine to
+     *  its application looper — calling it from any other thread throws "Player is accessed on the
+     *  wrong thread". So we hop onto the player's own looper before touching it. */
+    fun setVideoSurface(surface: Surface?) {
+        val looper = player.applicationLooper
+        if (looper.thread === Thread.currentThread()) {
+            player.setVideoSurface(surface)
+        } else {
+            Handler(looper).post { player.setVideoSurface(surface) }
+        }
+    }
 
     /** Pulls the current playback position from the player into [positionMs]. Called by the
      *  ViewModel's poller; kept explicit so the wrapper owns no scheduling of its own. */

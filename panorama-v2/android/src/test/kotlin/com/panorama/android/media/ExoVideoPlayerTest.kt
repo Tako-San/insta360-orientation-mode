@@ -70,8 +70,12 @@ class ExoVideoPlayerTest {
     }
 
     @Test
-    fun `setVideoSurface delegates`() {
+    fun `setVideoSurface delegates on the player's application looper`() {
         val (player, _) = mockPlayerWithListener()
+        // The wrapper hops onto the player's application looper before touching it (media3 is
+        // single-thread-affine). Robolectric runs this test on the main thread, so reporting the
+        // main looper makes the wrapper take its synchronous in-thread branch.
+        every { player.applicationLooper } returns android.os.Looper.getMainLooper()
         val wrapper = ExoVideoPlayer(player)
         val surface = mockk<Surface>(relaxed = true)
 

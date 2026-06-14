@@ -7,7 +7,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
@@ -17,6 +19,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.panorama.android.gl.PanoramaGlView
+import com.panorama.android.gl.SphericalPanoramaView
 
 /** The 360 player screen: a full-bleed [PanoramaGlView] with the off-screen [ArrowOverlay] and the
  *  [PlayerControls] stacked on top.
@@ -47,34 +50,66 @@ fun PlayerScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // The GL view is created once and remembered; subsequent recompositions only re-run update.
-        val glView = remember {
-            { ctx: android.content.Context ->
-                PanoramaGlView(ctx).apply {
-                    // Read the gaze the engine writes; the renderer picks it up on the next frame.
-                    bindGazeRef(viewModel.gazeRef)
-                    // Renderer -> player: hand the OES-backed Surface to ExoPlayer when it exists.
-                    onVideoSurfaceReady = { surface -> viewModel.attachVideoSurface(surface) }
+        // Handle to the live spherical view (mono mode) so onResume/onPause can be forwarded —
+        // SphericalGLSurfaceView registers its own sensor + GL thread only in those callbacks.
+        var sphericalRef by remember { mutableStateOf<SphericalPanoramaView?>(null) }
+
+        if (state.vrEnabled) {
+            // VR: the only renderer that can do split-screen stereo — the custom GL stack.
+            val glView = remember {
+                { ctx: android.content.Context ->
+                    PanoramaGlView(ctx).apply {
+                        bindGazeRef(viewModel.gazeRef)
+                        onVideoSurfaceReady = { surface -> viewModel.attachVideoSurface(surface) }
+                    }
                 }
             }
+            AndroidView(
+                factory = glView,
+                modifier = Modifier.fillMaxSize(),
+                update = { view ->
+                    view.setVrEnabled(true)
+                    view.onPlaybackStateChanged(state.isPlaying)
+                },
+            )
+        } else {
+            // Mono: media3's SphericalGLSurfaceView (wrapped by SphericalPanoramaView) owns the
+            // surface, gyro->view, and render loop. It also drives the player's projection via the
+            // frame-metadata + camera-motion sinks. The arrow still uses OrientationEngine.gazeRef.
+            val sphericalView = remember {
+                { ctx: android.content.Context ->
+                    SphericalPanoramaView(ctx).apply {
+                        sphericalRef = this
+                        onVideoSurfaceReady = { surface ->
+                            viewModel.attachVideoSurface(surface)
+                            viewModel.attachFrameMetadataListener(getVideoFrameMetadataListener())
+                            viewModel.attachCameraMotionListener(getCameraMotionListener())
+                        }
+                        onVideoSurfaceDestroyed = { viewModel.attachVideoSurface(null) }
+                    }
+                }
+            }
+            AndroidView(
+                factory = sphericalView,
+                modifier = Modifier.fillMaxSize(),
+                update = { /* spherical view self-drives its render loop */ },
+                onRelease = { sphericalRef = null },
+            )
         }
-
-        AndroidView(
-            factory = glView,
-            modifier = Modifier.fillMaxSize(),
-            update = { view ->
-                view.setVrEnabled(state.vrEnabled)
-                view.onPlaybackStateChanged(state.isPlaying)
-            },
-        )
 
         // Sensor lifecycle: start on RESUME, stop on PAUSE; also stop on dispose. The GLSurfaceView's
         // own onPause/onResume are driven by AndroidView's lifecycle hooks.
         DisposableEffect(lifecycleOwner) {
             val observer = LifecycleEventObserver { _, event ->
                 when (event) {
-                    Lifecycle.Event.ON_RESUME -> viewModel.startSensor()
-                    Lifecycle.Event.ON_PAUSE -> viewModel.stopSensor()
+                    Lifecycle.Event.ON_RESUME -> {
+                        viewModel.startSensor()
+                        sphericalRef?.onResume()
+                    }
+                    Lifecycle.Event.ON_PAUSE -> {
+                        sphericalRef?.onPause()
+                        viewModel.stopSensor()
+                    }
                     else -> Unit
                 }
             }

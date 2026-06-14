@@ -34,4 +34,14 @@ class DetectionTimelineTest : FunSpec({
         val empty = DetectionTimeline(Sidecar(emptyList()))
         empty.detectionsAt(50) shouldBe emptyList()
     }
+
+    test("wire bbox is carried into the domain Rect, absent bbox stays null") {
+        val withBox = SidecarObject(listOf(0.5f, 0.5f), listOf(0.1f, 0.2f, 0.3f, 0.4f), "drone")
+        val withoutBox = SidecarObject(listOf(0.5f, 0.5f), null, "drone")
+        val tl = DetectionTimeline(
+            Sidecar(listOf(SidecarFrame(0, listOf(withBox)), SidecarFrame(100, listOf(withoutBox)))),
+        )
+        tl.detectionsAt(0)[0].bboxNorm shouldBe Rect(0.1f, 0.2f, 0.3f, 0.4f)
+        tl.detectionsAt(100)[0].bboxNorm shouldBe null
+    }
 })

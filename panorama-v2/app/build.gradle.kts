@@ -18,6 +18,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    testOptions { unitTests.isIncludeAndroidResources = true }   // Robolectric
 }
 kotlin { jvmToolchain(17) }   // built-in Kotlin: top-level kotlin {} block
 dependencies {
@@ -35,4 +36,10 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.media3.exoplayer)
+    // unit tests: JUnit4 + Robolectric + MockK + Turbine + coroutines-test (same stack as :android).
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.mockk)
+    testImplementation(libs.turbine)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

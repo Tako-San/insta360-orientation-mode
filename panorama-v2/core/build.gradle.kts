@@ -4,11 +4,14 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kover)
 }
+// kotlin-math 1.8.0 is published as Java 21 bytecode and exposes inline functions (fromAxisAngle,
+// the q * v operator), so consumers MUST compile and run on JVM 21 — Kotlin refuses to inline
+// Java-21 bytecode into a lower target. Hence the whole module is Java 21, not 17.
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
-kotlin { jvmToolchain(17) }
+kotlin { jvmToolchain(21) }
 dependencies {
     api(libs.kotlin.math)
     implementation(libs.kotlinx.serialization.json)

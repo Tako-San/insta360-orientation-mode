@@ -59,6 +59,7 @@ class PlayerViewModelTest {
 
     private val isPlaying = MutableStateFlow(false)
     private val positionMs = MutableStateFlow(0L)
+    private val durationMs = MutableStateFlow(0L)
     private val identityGaze = GazeState(Quaternion(), 0f, 0f, 0f)
 
     @Before
@@ -66,6 +67,7 @@ class PlayerViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { exo.isPlaying } returns isPlaying
         every { exo.positionMs } returns positionMs
+        every { exo.durationMs } returns durationMs
         every { engine.currentGaze() } returns identityGaze
     }
 

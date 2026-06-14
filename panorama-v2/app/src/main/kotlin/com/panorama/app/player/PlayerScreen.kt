@@ -95,7 +95,7 @@ fun PlayerScreen(
         PlayerControls(
             isPlaying = state.isPlaying,
             positionMs = state.playbackPosMs,
-            durationMs = 0L,
+            durationMs = state.durationMs,
             vrEnabled = state.vrEnabled,
             onPlayPause = { if (state.isPlaying) viewModel.pause() else viewModel.play() },
             onSeek = viewModel::seek,

@@ -88,9 +88,15 @@ class PlayerViewModel(
         scope.launch {
             exo.positionMs.collect { pos -> _state.update { it.copy(playbackPosMs = pos) } }
         }
-        // Throttled arrow recompute (~30 Hz) on the injectable dispatcher.
+        // Throttled arrow recompute + transport poll (~30 Hz) on the injectable dispatcher. The poll
+        // is what drives the seek bar: refreshPosition() samples position+duration on the player's
+        // own looper (media3 is single-thread-affine) into exo.positionMs / exo.durationMs, which we
+        // then mirror into the slow UI state.
         scope.launch(throttleDispatcher) {
             while (isActive) {
+                exo.refreshPosition()
+                val dur = exo.durationMs.value
+                if (dur > 0L) _state.update { if (it.durationMs == dur) it else it.copy(durationMs = dur) }
                 recomputeArrow()
                 delay(tickerIntervalMs)
             }
@@ -125,9 +131,13 @@ class PlayerViewModel(
         _state.update { it.copy(calibrationNonce = it.calibrationNonce + 1) }
     }
 
-    /** Open [videoUri] in the player; if a [sidecarUri] is given, load its detections for arrows. */
+    /** Open [videoUri] in the player and start playback; if a [sidecarUri] is given, load its
+     *  detections for arrows. This is a 360 player, so opening a clip auto-plays it: starting
+     *  playback also spins up the GL render loop (via isPlaying -> onPlaybackStateChanged), which a
+     *  prepare-only open would leave halted on the first frame. */
     fun selectMedia(videoUri: Uri, sidecarUri: Uri? = null) {
         exo.open(videoUri)
+        exo.play()
         detectionSource = sidecarUri?.let { sidecarLoader.load(it) }
     }
 

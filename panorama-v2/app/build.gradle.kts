@@ -37,6 +37,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.hilt.android)
+    implementation(libs.androidx.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
     implementation(libs.media3.exoplayer)
     // unit tests: JUnit4 + Robolectric + MockK + Turbine + coroutines-test (same stack as :android).

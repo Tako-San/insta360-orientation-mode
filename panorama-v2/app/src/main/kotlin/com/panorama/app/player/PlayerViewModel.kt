@@ -1,6 +1,7 @@
 package com.panorama.app.player
 
 import android.net.Uri
+import android.view.Surface
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.panorama.android.detection.SidecarLoader
@@ -9,6 +10,7 @@ import com.panorama.android.sensor.OrientationEngine
 import com.panorama.core.calibration.AxisConvention
 import com.panorama.core.detection.DetectionSource
 import com.panorama.core.fov.ArrowResolver
+import com.panorama.core.math.GazeState
 import com.panorama.core.projection.ProjectionModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -21,6 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import kotlin.math.PI
 
@@ -93,6 +96,19 @@ class PlayerViewModel(
             }
         }
     }
+
+    /** The sensor engine's own gaze snapshot, exposed so the UI can hand it straight to
+     *  [com.panorama.android.gl.PanoramaGlView.bindGazeRef] without the UI touching :android sensors
+     *  directly. The GL thread then reads exactly what the engine writes — one shared reference. */
+    val gazeRef: AtomicReference<GazeState> get() = orientationEngine.gazeRef
+
+    /** Sensor lifecycle proxies driven from the screen's DisposableEffect (onResume/onPause). */
+    fun startSensor() = orientationEngine.start()
+
+    fun stopSensor() = orientationEngine.stop()
+
+    /** Wire the GL view's output Surface into the player once the renderer has created it. */
+    fun attachVideoSurface(surface: Surface?) = exo.setVideoSurface(surface)
 
     fun play() = exo.play()
 

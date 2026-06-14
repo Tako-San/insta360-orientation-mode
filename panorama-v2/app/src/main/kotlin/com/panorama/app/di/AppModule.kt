@@ -3,8 +3,9 @@ package com.panorama.app.di
 import android.content.ContentResolver
 import android.content.Context
 import android.hardware.SensorManager
+import android.hardware.display.DisplayManager
+import android.view.Display
 import android.view.Surface
-import android.view.WindowManager
 import com.panorama.android.detection.SidecarLoader
 import com.panorama.android.media.ExoVideoPlayer
 import com.panorama.android.sensor.OrientationEngine
@@ -70,13 +71,13 @@ object AppModule {
         )
     }
 
-    @Suppress("DEPRECATION") // Display#getRotation is the cross-API-level path that works from a non-Activity Context.
+    /** Read the rotation via [DisplayManager], NOT Context#getDisplay: this runs from the
+     *  application (non-visual) Context on the sensor thread, and Context#getDisplay throws
+     *  "not associated with a display" on a non-visual Context (Android 11+). DisplayManager works
+     *  from any Context. */
     private fun Context.currentDisplayRotation(): Int {
-        val display = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            display
-        } else {
-            (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
-        }
+        val dm = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        val display = dm.getDisplay(Display.DEFAULT_DISPLAY)
         return display?.rotation ?: Surface.ROTATION_0
     }
 }

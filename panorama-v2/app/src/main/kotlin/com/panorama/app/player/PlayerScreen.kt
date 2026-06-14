@@ -92,7 +92,11 @@ fun PlayerScreen(
             AndroidView(
                 factory = sphericalView,
                 modifier = Modifier.fillMaxSize(),
-                update = { /* spherical view self-drives its render loop */ },
+                // Resume here too (idempotent): if ON_RESUME was delivered before this factory ran,
+                // the lifecycle observer's sphericalRef?.onResume() was a no-op and the inner
+                // SphericalGLSurfaceView's render thread would stay paused (black first frame on cold
+                // start). update runs right after the factory, so this guarantees it is resumed.
+                update = { view -> view.onResume() },
                 onRelease = { sphericalRef = null },
             )
         }

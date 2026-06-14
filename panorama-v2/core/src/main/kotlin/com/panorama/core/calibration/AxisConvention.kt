@@ -12,13 +12,24 @@ package com.panorama.core.calibration
  * [com.panorama.core.math.quatFromYawPitch] (Ry(yaw)*Rx(pitch)), so view = Rx(-pitch)*Ry(-yaw).
  * They are the starting guess; Phase 4 tunes them on the phone by editing THIS file only.
  *
+ * Phase 4 tuning: the full set of axis-correction knobs lives here so on-device calibration is a
+ * matter of editing this one data class (no logic edits, then rebuild). [swapYawPitch] exchanges
+ * the two axes; [yawSign]/[pitchSign] flip each direction. Together they cover all 8 combinations
+ * (swap x 2 signs) needed to map any device-frame convention onto the screen:
+ *   - horizontal head-turn moves the wrong way  -> flip [yawSign]
+ *   - vertical tilt moves the wrong way          -> flip [pitchSign]
+ *   - turning horizontally pans vertically (axes transposed) -> set [swapYawPitch] = true
+ *
  * @param yawSign sign applied to yaw before building the view rotation about +Y.
  * @param pitchSign sign applied to pitch before building the view rotation about +X.
+ * @param swapYawPitch when true, the gaze yaw and pitch are exchanged before signs are applied
+ *        (handles a device frame whose horizontal/vertical axes are transposed vs the screen).
  * @param glForwardIsMinusZ true when the eye looks down -Z (OpenGL convention); matches the
  *        forward vector (0,0,-1) used by [com.panorama.core.math.yawPitchOf].
  */
 data class AxisConvention(
     val yawSign: Float = -1f,
     val pitchSign: Float = -1f,
+    val swapYawPitch: Boolean = false,
     val glForwardIsMinusZ: Boolean = true,
 )

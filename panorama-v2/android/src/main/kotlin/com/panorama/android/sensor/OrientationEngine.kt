@@ -69,6 +69,22 @@ class OrientationEngine(
         val smoothed = smoothing.update(relative, dtSec)
         val (yaw, pitch) = yawPitchOf(smoothed.quaternion)
 
+        // Phase 4 axis-calibration diagnostic. Sampled sparsely (every Nth sample) so it does not
+        // flood logcat. Shows the angles at each stage so the device-frame -> screen mapping can be
+        // read off directly: RAW = pre-calibration (absolute device pose), REL = after re-basing to
+        // the calibration zero (this is what feeds the view), FINAL = after smoothing. Snapshot with
+        //   adb logcat OrientationEngine:I '*:S'
+        if (sampleCount++ % LOG_INTERVAL == 0L) {
+            val (rawYaw, rawPitch) = yawPitchOf(raw)
+            val (relYaw, relPitch) = yawPitchOf(relative)
+            android.util.Log.i(
+                TAG,
+                "RAW yaw=${rawYaw.fmt()} pitch=${rawPitch.fmt()} | " +
+                    "REL yaw=${relYaw.fmt()} pitch=${relPitch.fmt()} | " +
+                    "FINAL yaw=${yaw.fmt()} pitch=${pitch.fmt()}",
+            )
+        }
+
         gazeRef.set(
             GazeState(
                 quaternion = smoothed.quaternion,
@@ -81,6 +97,13 @@ class OrientationEngine(
     }
 
     private companion object {
+        const val TAG = "OrientationEngine"
+        const val LOG_INTERVAL = 30L
         val IDENTITY_GAZE = GazeState(Quaternion(), 0f, 0f, 0f)
+
+        fun Float.fmt(): String = "%.1f".format(this)
     }
+
+    @Volatile
+    private var sampleCount: Long = 0L
 }

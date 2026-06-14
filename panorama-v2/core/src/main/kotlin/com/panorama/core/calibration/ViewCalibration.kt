@@ -33,8 +33,12 @@ object ViewCalibration {
      *  (yawSign=-1, pitchSign=-1) this is exactly the inverse of the gaze rotation
      *  Ry(yaw)*Rx(pitch), i.e. the view matrix that rotates the world opposite to the gaze. */
     fun viewMatrix(gaze: GazeState, conv: AxisConvention, out: FloatArray) {
-        val yaw = conv.yawSign * gaze.yawDeg * DEG_TO_RAD
-        val pitch = conv.pitchSign * gaze.pitchDeg * DEG_TO_RAD
+        // swapYawPitch is applied before the signs so the tuning knobs compose predictably
+        // (swap chooses which gaze axis drives yaw vs pitch; the signs then orient each).
+        val yawDeg = if (conv.swapYawPitch) gaze.pitchDeg else gaze.yawDeg
+        val pitchDeg = if (conv.swapYawPitch) gaze.yawDeg else gaze.pitchDeg
+        val yaw = conv.yawSign * yawDeg * DEG_TO_RAD
+        val pitch = conv.pitchSign * pitchDeg * DEG_TO_RAD
         val cy = cos(yaw); val sy = sin(yaw)
         val cp = cos(pitch); val sp = sin(pitch)
 

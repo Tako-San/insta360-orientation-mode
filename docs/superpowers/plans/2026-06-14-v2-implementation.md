@@ -6,7 +6,7 @@
 
 **Architecture:** Three Gradle modules, strictly one-way deps `:app → :android → :core`. `:core` is pure-JVM (math via `kotlin-math`, all calibration/detection/FOV/stereo logic, ~100% unit-tested, blocking CI gate). `:android` owns GL ES 2 renderer + SensorManager + ExoPlayer→SurfaceTexture + adapters. `:app` is Compose + Hilt. Smoothness via 3 threads + lock-free `AtomicReference<GazeState>`, Choreographer-driven `WHEN_DIRTY` rendering, predictive rotation, and single-context VR dual-viewport. Calibration confined to two tunable sites + a release-gating golden-image device test.
 
-**Tech Stack:** Kotlin 2.3.21, AGP 9.2.1, Java 17, minSdk 29 / targetSdk 35, `dev.romainguy:kotlin-math` 1.8.0, media3 1.10.1, Hilt 2.59.2 (KSP 2.3.9), Compose BOM 2026.05.01, Kotest 6.1.11 (property), MockK 1.14.11, Robolectric 4.16.1, Turbine 1.2.1, Kover 0.9.8.
+**Tech Stack:** Kotlin 2.3.21, AGP 9.2.1, Java 17, minSdk 29 / targetSdk 35 / compileSdk 36, `dev.romainguy:kotlin-math` 1.6.0 (see pin rationale), media3 1.10.1, Hilt 2.59.2 (KSP 2.3.9), Compose BOM 2026.05.01, Kotest 6.1.11 (property), MockK 1.14.11, Robolectric 4.16.1, Turbine 1.2.1, Kover 0.9.8.
 
 **Spec:** `docs/superpowers/specs/2026-06-14-v2-from-scratch-design.md`. **Branch:** `rewrite-v2`. **Project root:** `panorama-v2/` (new Gradle build inside this repo).
 
@@ -15,6 +15,12 @@
 ## Version pin rationale (READ FIRST)
 
 KSP has **no release for Kotlin 2.4.0** yet (verified 2026-06-14). Hilt's compiler needs KSP. To avoid a build blocker we pin the **last stable KSP-ready line**: **Kotlin 2.3.21 + KSP 2.3.9 + Compose-compiler plugin 2.3.21**. Do NOT bump Kotlin to 2.4.0 until a matching KSP ships. AGP 9.2.1 requires Gradle 9.x + JDK 17 (we have 17). Compose compiler version MUST equal the Kotlin version (plugin `org.jetbrains.kotlin.plugin.compose`).
+
+**kotlin-math pinned to 1.6.0 (NOT 1.8.0).** Verified at bootstrap: kotlin-math 1.7.0/1.8.0 are published as **Java-21 bytecode with inline functions** — consuming them forces the whole project onto JDK 21 (and a non-portable downloaded toolchain). 1.6.0 is the last release with Java-8 bytecode, inlines into any target, and its API (Quaternion, Float3, fromAxisAngle [degrees], `q * v`, top-level slerp/dot/length/normalize) is confirmed compatible by the Task 1.2 boundary test. The whole project stays on **Java 17** as planned.
+
+**Bootstrap reality (AGP 9, verified):** AGP 9.0+ has **built-in Kotlin** — Android modules do NOT apply `org.jetbrains.kotlin.android` (it conflicts). Kotlin is configured via a top-level `kotlin { jvmToolchain(17) }` block; the root build pins KGP 2.3.21 + KSP 2.3.9 via `buildscript { dependencies { classpath ... } }`. **compileSdk = 36** (androidx.core 1.18.0 + media3 1.10.1 require ≥36; androidx.core 1.19.0 would require 37 — kept at 1.18.0). Gradle wrapper is **9.4.1** (AGP 9.2.1 minimum).
+
+**Testing convention (verified):** `:core` tests run on the **JUnit5 platform with Kotest** — write them as `class X : FunSpec({ test("...") { ... } })`, NOT JUnit4 `@Test` (plain `@Test` silently produces "0 tests found" because only `kotest-runner-junit5` is on the classpath). The code blocks in Tasks 1.3–1.9 below are written `@Test`-style for readability — **translate them to Kotest FunSpec** when implementing. `:android` Robolectric tests (Phase 2) deliberately stay **JUnit4** (`@RunWith(RobolectricTestRunner::class)` + `@Test`) — that is AGP's separate Android-unit test runtime and is correct; do not "unify" it onto Kotest.
 
 ---
 
@@ -477,7 +483,7 @@ class KotlinMathBoundaryTest {
     }
     @Test fun `euler round-trip - build from yaw,pitch then recover within eps`() {
         // The Task 1.5 round-trip + Task 1.4 smoothing depend on Euler<->Quaternion. PIN IT HERE.
-        // Confirm the actual kotlin-math 1.8.0 spelling; the helper below isolates it.
+        // Confirm the actual kotlin-math 1.6.0 spelling; the helper below isolates it.
         val q = quatFromYawPitch(40f, -15f)              // see helper note
         val (yaw, pitch) = yawPitchOf(q)
         assert(abs(yaw - 40f) < 0.5f && abs(pitch - (-15f)) < 0.5f)

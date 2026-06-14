@@ -422,7 +422,7 @@ A library survey (GitHub release dates checked 2026-06-14) settled what we reuse
 
 | Area | Decision | Why |
 |---|---|---|
-| Quaternion / matrix algebra | **`dev.romainguy:kotlin-math`** | Alive (v1.8.0, Mar 2026), Apache-2.0, Kotlin-idiomatic, pure-JVM. Removes axis-order/Hamilton bugs. |
+| Quaternion / matrix algebra | **`dev.romainguy:kotlin-math`** (pinned **1.6.0**) | Apache-2.0, Kotlin-idiomatic, pure-JVM. Removes axis-order/Hamilton bugs. NB: 1.7.0+ ship Java-21 bytecode (force JDK 21) — 1.6.0 is the last Java-8-bytecode release, keeps the project on Java 17. |
 | Gyro → fused orientation | **Android `SensorManager` `TYPE_ROTATION_VECTOR`** | The OS already does sensor fusion and returns a unit quaternion. A 3rd-party lib (FSensor) solves a problem we don't have. |
 | Sphere render / equirect / playback | **Own GL ES 2 renderer** (not media3 `SphericalGLSurfaceView`) | The media3 view is alive & not deprecated, but cannot do VR dual-viewport, predictive rotation, or our calibration/sensitivity — all of which are core features. Taking it would force forking its GL layer for VR anyway; simpler to own ~200 lines. |
 | VR split-screen (2 viewports, IPD, lens) | **Own** (`StereoEyeLayout` + renderer) | No live Kotlin/Compose lib in 2026. Google Cardboard is the only live stereo+distortion source but is C++/NDK-only with no Kotlin API; lens distortion isn't needed for non-cardboard split-screen. |

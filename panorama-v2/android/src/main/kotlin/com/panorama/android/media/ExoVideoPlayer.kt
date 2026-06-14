@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Handler
 import android.view.Surface
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -31,9 +32,11 @@ class ExoVideoPlayer(private val player: Player) {
     private val _positionMs = MutableStateFlow(0L)
     val positionMs: StateFlow<Long> = _positionMs.asStateFlow()
 
-    /** Media duration in ms, or whatever the player reports (may be [androidx.media3.common.C.TIME_UNSET]
-     *  before prepare). Re-read on demand rather than cached. */
-    val durationMs: Long get() = player.duration
+    /** Last known media duration in ms, refreshed alongside the position by [refreshPosition] on the
+     *  player's own looper. Exposed as a flow so the (off-main) ViewModel never reads the player
+     *  directly — media3 is single-thread-affine and a cross-thread getter throws. */
+    private val _durationMs = MutableStateFlow(0L)
+    val durationMs: StateFlow<Long> = _durationMs.asStateFlow()
 
     init {
         player.addListener(object : Player.Listener {
@@ -68,10 +71,24 @@ class ExoVideoPlayer(private val player: Player) {
         }
     }
 
-    /** Pulls the current playback position from the player into [positionMs]. Called by the
-     *  ViewModel's poller; kept explicit so the wrapper owns no scheduling of its own. */
+    /** Pulls the current playback position and duration from the player into [positionMs] /
+     *  [durationMs]. Called by the ViewModel's poller (off the main thread), so it hops onto the
+     *  player's application looper first — media3 is single-thread-affine and reading
+     *  currentPosition/duration from any other thread throws "Player is accessed on the wrong
+     *  thread". The wrapper owns no scheduling of its own beyond this safe hop. */
     fun refreshPosition() {
+        val looper = player.applicationLooper
+        if (looper.thread === Thread.currentThread()) {
+            sampleTransport()
+        } else {
+            Handler(looper).post { sampleTransport() }
+        }
+    }
+
+    private fun sampleTransport() {
         _positionMs.value = player.currentPosition
+        val dur = player.duration
+        if (dur != C.TIME_UNSET) _durationMs.value = dur
     }
 
     fun release() = player.release()

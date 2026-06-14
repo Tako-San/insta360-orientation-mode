@@ -93,11 +93,15 @@ class ExoVideoPlayerTest {
     }
 
     @Test
-    fun `durationMs reflects player duration`() {
+    fun `refreshPosition samples duration from player`() {
         val (player, _) = mockPlayerWithListener()
+        // refreshPosition hops to the player's looper; reporting the main looper makes it sample
+        // synchronously on this (Robolectric main) thread.
+        every { player.applicationLooper } returns android.os.Looper.getMainLooper()
         every { player.duration } returns 42_000L
         val wrapper = ExoVideoPlayer(player)
 
-        assertEquals(42_000L, wrapper.durationMs)
+        wrapper.refreshPosition()
+        assertEquals(42_000L, wrapper.durationMs.value)
     }
 }

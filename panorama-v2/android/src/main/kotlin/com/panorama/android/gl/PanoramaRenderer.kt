@@ -5,6 +5,7 @@ import android.opengl.GLES11Ext
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
+import android.util.Log
 import com.panorama.core.calibration.AxisConvention
 import com.panorama.core.calibration.ViewCalibration
 import com.panorama.core.math.GazeState
@@ -59,6 +60,12 @@ class PanoramaRenderer(
     @Volatile
     var vrEnabled: Boolean = false
 
+    /** Single source of truth for the equirect texture vertical flip. When true (the default for
+     *  this device/decoder) onDrawFrame composes a V-flip onto the decoder's stMatrix. Flip this to
+     *  false if a device delivers an already-flipped transform and the image appears upside down. */
+    @Volatile
+    var flipV: Boolean = true
+
     /** Per-eye yaw straddle for the stereo pair (degrees). */
     @Volatile
     var ipdYawDeg: Float = DEFAULT_IPD_YAW_DEG
@@ -90,6 +97,11 @@ class PanoramaRenderer(
     private val viewMatrix = FloatArray(16)
     private val mvpMatrix = FloatArray(16)
     private val stMatrix = FloatArray(16)
+    private val stMatrixSrc = FloatArray(16)
+
+    /** Diagnostic counter: number of decoded frames pulled into the OES texture. Logged sparsely so
+     *  logcat shows frames are actually flowing (or not) without flooding. */
+    private var framesPulled = 0L
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         program = buildProgram(Shaders.VERTEX, Shaders.FRAGMENT)
@@ -122,11 +134,24 @@ class PanoramaRenderer(
     override fun onDrawFrame(gl: GL10?) {
         val st = surfaceTexture ?: return
 
-        // Pull the newest decoded frame into the OES texture, with its transform (carries V-flip).
+        // Pull the newest decoded frame into the OES texture, with its transform.
         if (pendingFrame) {
             pendingFrame = false
             st.updateTexImage()
             st.getTransformMatrix(stMatrix)
+            // V-flip lives HERE and only here (project invariant). The decoder's stMatrix does not
+            // reliably carry the equirect vertical flip on every device/codec, so we compose an
+            // explicit V-flip on top of it. [flipV] is the single quick-toggle if a device needs the
+            // other parity. Applied as stMatrix' = flip(v) * stMatrix, via a scratch buffer so the
+            // hot path stays allocation-free (multiplyMM forbids aliasing src/dst).
+            if (flipV) {
+                System.arraycopy(stMatrix, 0, stMatrixSrc, 0, 16)
+                Matrix.multiplyMM(stMatrix, 0, V_FLIP_MATRIX, 0, stMatrixSrc, 0)
+            }
+            framesPulled++
+            if (framesPulled % FRAME_LOG_INTERVAL == 1L) {
+                Log.i(TAG, "onDrawFrame: pulled frame #$framesPulled (flipV=$flipV, vr=$vrEnabled)")
+            }
         }
 
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
@@ -297,6 +322,8 @@ class PanoramaRenderer(
             .also { it.put(this).position(0) }
 
     companion object {
+        private const val TAG = "PanoramaRenderer"
+        private const val FRAME_LOG_INTERVAL = 60L
         private const val MESH_STACKS = 64
         private const val MESH_SLICES = 128
         private const val FOV_Y_DEG = 90f
@@ -306,5 +333,14 @@ class PanoramaRenderer(
         private const val DEFAULT_IPD_YAW_DEG = 5f
         private const val BYTES_PER_FLOAT = 4
         private const val BYTES_PER_SHORT = 2
+
+        /** Column-major V-flip in texture space: maps v -> 1 - v (scale -1 about v, translate +1).
+         *  Composed onto the decoder transform when [flipV] is set. */
+        private val V_FLIP_MATRIX = floatArrayOf(
+            1f, 0f, 0f, 0f,
+            0f, -1f, 0f, 0f,
+            0f, 0f, 1f, 0f,
+            0f, 1f, 0f, 1f,
+        )
     }
 }

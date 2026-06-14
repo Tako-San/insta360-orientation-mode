@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.SurfaceTexture
 import android.opengl.GLSurfaceView
 import android.util.AttributeSet
+import android.util.Log
 import android.view.Surface
 import com.panorama.core.calibration.AxisConvention
 import com.panorama.core.math.GazeState
@@ -89,12 +90,21 @@ class PanoramaGlView @JvmOverloads constructor(
 
     private fun onSurfaceTextureReady(st: SurfaceTexture) {
         surfaceTexture = st
-        // Decoupled from cadence: only mark a new frame pending, never requestRender here.
-        st.setOnFrameAvailableListener { renderer.pendingFrame = true }
+        Log.i(TAG, "onSurfaceTextureReady: video surface ready, wiring frame listener")
+        // The Choreographer driver owns the playback cadence (for gaze smoothness), but a decoded
+        // frame must always be pulled even when the driver is stopped or out of sync with the
+        // decoder clock. So a new frame both marks pendingFrame AND requests a render: belt and
+        // braces against the first-frame/freeze classes of bugs.
+        st.setOnFrameAvailableListener {
+            renderer.pendingFrame = true
+            requestRender()
+        }
         onVideoSurfaceReady?.invoke(Surface(st))
     }
 
     private companion object {
+        private const val TAG = "PanoramaGlView"
+
         fun identityGaze(): GazeState {
             val q = Quaternion()
             val (yaw, pitch) = yawPitchOf(q)

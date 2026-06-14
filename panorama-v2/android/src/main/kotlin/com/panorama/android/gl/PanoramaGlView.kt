@@ -98,6 +98,11 @@ class PanoramaGlView @JvmOverloads constructor(
         st.setOnFrameAvailableListener {
             renderer.pendingFrame = true
             requestRender()
+            // WHEN_DIRTY coalesces a requestRender() that races the one auto-draw fired right after
+            // onSurfaceCreated: the draw can consume the tick before pendingFrame is set, stranding
+            // the first decoded frame until an unrelated UI event redraws. Re-arm on the next
+            // main-loop pass (after that auto-draw has run) so the still-pending frame always paints.
+            post { requestRender() }
         }
         onVideoSurfaceReady?.invoke(Surface(st))
     }

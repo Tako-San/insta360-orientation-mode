@@ -150,7 +150,9 @@ class PanoramaRenderer(
             }
             framesPulled++
             if (framesPulled % FRAME_LOG_INTERVAL == 1L) {
-                Log.i(TAG, "onDrawFrame: pulled frame #$framesPulled (flipV=$flipV, vr=$vrEnabled)")
+                val g = gazeRef.get()
+                Log.i(TAG, "frame #$framesPulled flipV=$flipV vr=$vrEnabled " +
+                    "gaze yaw=${g.yawDeg} pitch=${g.pitchDeg} velDeg/s=${g.angularVelocityDegPerSec}")
             }
         }
 

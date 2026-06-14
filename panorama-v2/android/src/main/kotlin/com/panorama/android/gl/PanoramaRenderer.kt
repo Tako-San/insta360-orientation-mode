@@ -39,10 +39,16 @@ import javax.microedition.khronos.opengles.GL10
  *         owner can create a [android.view.Surface] for the player. */
 class PanoramaRenderer(
     private val projectionModel: ProjectionModel,
-    private val gazeRef: AtomicReference<GazeState>,
+    gazeRef: AtomicReference<GazeState>,
     private val axisConvention: AxisConvention = AxisConvention(),
     private val onSurfaceTextureReady: (SurfaceTexture) -> Unit,
 ) : GLSurfaceView.Renderer {
+
+    /** Lock-free orientation snapshot read each GL frame. The reference itself is volatile so the UI
+     *  thread can swap in the sensor engine's own AtomicReference (see [PanoramaGlView.bindGazeRef])
+     *  while the GL thread keeps reading: a single reference write is atomic, no torn state. */
+    @Volatile
+    var gazeRef: AtomicReference<GazeState> = gazeRef
 
     /** Set true by the SurfaceTexture's OnFrameAvailableListener (any thread); consumed and cleared
      *  on the GL thread in [onDrawFrame]. Volatile is enough: single flag, no compound update. */

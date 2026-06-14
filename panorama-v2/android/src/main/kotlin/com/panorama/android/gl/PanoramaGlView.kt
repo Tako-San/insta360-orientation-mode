@@ -57,6 +57,14 @@ class PanoramaGlView @JvmOverloads constructor(
         driver = ChoreographerDriver(ChoreographerFrameScheduler()) { requestRender() }
     }
 
+    /** Point the renderer at an external orientation snapshot — typically the sensor engine's own
+     *  AtomicReference — so the GL thread reads exactly the gaze the engine writes, with no copy
+     *  step. The reference swap is volatile inside the renderer and is picked up on the next frame. */
+    fun bindGazeRef(ref: AtomicReference<GazeState>) {
+        renderer.gazeRef = ref
+        requestRender()
+    }
+
     /** Enable / disable split-screen VR. Takes effect on the next drawn frame. */
     fun setVrEnabled(enabled: Boolean) {
         renderer.vrEnabled = enabled

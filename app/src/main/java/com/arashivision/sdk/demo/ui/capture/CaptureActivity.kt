@@ -432,11 +432,15 @@ class CaptureActivity : BaseActivity<ActivityCaptureBinding, CaptureViewModel>()
         }
         if (!pipelinePresent) return
 
+        // Pitch is inverted for the online capture player only: the SDK InstaCapturePlayerView
+        // maps setPitch the opposite way to our own offline GL renderer (which is already
+        // calibrated). Inverting here keeps the offline path untouched.
+        val capturePitch = -pitchDeg
         try {
             if (vrManager.isVrMode) {
-                vrManager.applyOrientation(yawDeg, pitchDeg)
+                vrManager.applyOrientation(yawDeg, capturePitch)
             } else {
-                captureSink.apply(yawDeg, pitchDeg)
+                captureSink.apply(yawDeg, capturePitch)
             }
         } catch (e: Exception) {
             logger.e("tryApplyOrientationToPlayer error: ${e.message}")

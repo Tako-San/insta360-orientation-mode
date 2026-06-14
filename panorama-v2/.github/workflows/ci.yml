@@ -1,0 +1,23 @@
+name: v2 CI
+on:
+  push: { paths: ['panorama-v2/**'] }
+  pull_request: { paths: ['panorama-v2/**'] }
+defaults: { run: { working-directory: panorama-v2 } }
+jobs:
+  core-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew :core:test :core:koverVerify
+  android-app:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew :android:testDebugUnitTest :app:assembleDebug

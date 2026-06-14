@@ -100,7 +100,7 @@ kotlin = "2.3.21"            # pinned: KSP has no 2.4.0 build yet (see plan head
 ksp = "2.3.9"
 hilt = "2.59.2"
 kover = "0.9.8"
-coreKtx = "1.19.0"
+coreKtx = "1.18.0"          # 1.19.0 requires compileSdk 37; 1.18.0 is the last that builds on 36
 activityCompose = "1.13.0"
 composeBom = "2026.05.01"
 navigationCompose = "2.9.8"
@@ -196,7 +196,7 @@ org.gradle.configuration-cache=true
 
 `panorama-v2/gradle/wrapper/gradle-wrapper.properties`:
 ```properties
-distributionUrl=https\://services.gradle.org/distributions/gradle-9.0-bin.zip
+distributionUrl=https\://services.gradle.org/distributions/gradle-9.4.1-bin.zip
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
 zipStoreBase=GRADLE_USER_HOME
@@ -273,7 +273,7 @@ plugins {
 }
 android {
     namespace = "com.panorama.android"
-    compileSdk = 35
+    compileSdk = 36          // androidx.core 1.19 + media3 1.10 require compileSdk >= 36
     defaultConfig { minSdk = 29 }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -310,7 +310,7 @@ android {
     compileSdk = 35
     defaultConfig {
         applicationId = "com.panorama.app"
-        minSdk = 29; targetSdk = 35; versionCode = 1; versionName = "2.0.0"
+        minSdk = 29; targetSdk = 35; versionCode = 1; versionName = "2.0.0"   // compileSdk = 36 above
         ndk { abiFilters += "arm64-v8a" }
     }
     buildFeatures { compose = true }

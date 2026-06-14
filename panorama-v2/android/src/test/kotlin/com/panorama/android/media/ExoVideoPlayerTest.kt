@@ -23,9 +23,13 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class ExoVideoPlayerTest {
 
-    /** Captures the [Player.Listener] registered in init so tests can drive callbacks by hand. */
+    /** Captures the [Player.Listener] registered in init so tests can drive callbacks by hand.
+     *  Reports the main looper as the player's application looper so the wrapper's onPlayerThread
+     *  hop runs every call inline on this (Robolectric main) thread — media3 is thread-affine and
+     *  every wrapper method now hops onto applicationLooper before touching the player. */
     private fun mockPlayerWithListener(): Pair<Player, () -> Player.Listener> {
         val player = mockk<Player>(relaxed = true)
+        every { player.applicationLooper } returns android.os.Looper.getMainLooper()
         val slot = slot<Player.Listener>()
         every { player.addListener(capture(slot)) } returns Unit
         return player to { slot.captured }
@@ -81,6 +85,26 @@ class ExoVideoPlayerTest {
 
         wrapper.setVideoSurface(surface)
         verify { player.setVideoSurface(surface) }
+    }
+
+    @Test
+    fun `setVideoFrameMetadataListener delegates on the player looper`() {
+        val player = mockk<androidx.media3.exoplayer.ExoPlayer>(relaxed = true)
+        every { player.applicationLooper } returns android.os.Looper.getMainLooper()
+        val wrapper = ExoVideoPlayer(player)
+        val listener = mockk<androidx.media3.exoplayer.video.VideoFrameMetadataListener>(relaxed = true)
+        wrapper.setVideoFrameMetadataListener(listener)
+        verify { player.setVideoFrameMetadataListener(listener) }
+    }
+
+    @Test
+    fun `setCameraMotionListener delegates on the player looper`() {
+        val player = mockk<androidx.media3.exoplayer.ExoPlayer>(relaxed = true)
+        every { player.applicationLooper } returns android.os.Looper.getMainLooper()
+        val wrapper = ExoVideoPlayer(player)
+        val listener = mockk<androidx.media3.exoplayer.video.spherical.CameraMotionListener>(relaxed = true)
+        wrapper.setCameraMotionListener(listener)
+        verify { player.setCameraMotionListener(listener) }
     }
 
     @Test

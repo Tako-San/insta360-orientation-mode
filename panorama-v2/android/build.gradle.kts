@@ -10,7 +10,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17   // kotlin jvmTarget inherits from this
     }
-    testOptions { unitTests.isIncludeAndroidResources = true }   // Robolectric
+    testOptions {
+        unitTests.isIncludeAndroidResources = true   // Robolectric
+        unitTests.all { it.maxHeapSize = "1g" }      // Robolectric headroom over the 512m default
+    }
 }
 kotlin { jvmToolchain(17) }   // built-in Kotlin: top-level kotlin {} block
 dependencies {

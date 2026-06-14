@@ -27,7 +27,7 @@ are explicitly designed out.
 | Real Insta360 SDK | **OUT** of v2, isolated to a future `:adapter-insta` module. The seam is enough. |
 | Video format | **Equirectangular** now; dual-fisheye `.insv` later behind a projection seam. |
 | UI stack | **Jetpack Compose** (GL via `AndroidView`). |
-| Pure core | **Rewritten from scratch**, including axis calibration (first principles). |
+| Pure core | **Rewritten from scratch** (domain logic + axis calibration from first principles); quaternion/matrix *algebra* delegated to `kotlin-math`, not hand-rolled (see §4.1). |
 | Priorities | **Equal**: smoothness AND testability AND clean architecture. No skew. |
 | VR | **Two `glViewport` passes in one GL context** (no PixelCopy, no second player). |
 | Detections | `DetectionSource` port: JSON sidecar now, on-device realtime later. |
@@ -112,10 +112,21 @@ wrapper. One impl forever; inventing a port is the over-engineering we reject.
 
 Package `com.panorama.core`. All pure JVM, no `android.*`.
 
-### 4.1 Math
-- `Quaternion(w,x,y,z)` — multiply, conjugate, slerp, fromRotationMatrix (Shepperd), toEuler,
-  rotate(vec). Written from first principles, pinned by algebraic-identity tests.
-- `UnitVector3`, `Vec2`, `MeshData(positions, texCoords, indices)`, `Mat4` (column-major).
+### 4.1 Math — use `kotlin-math` (do NOT hand-roll quaternions/matrices)
+Quaternion/vector/matrix algebra comes from **`dev.romainguy:kotlin-math`** (Romain Guy / Google,
+Apache-2.0, Kotlin-idiomatic, KMP, alive in 2026). It provides `Quaternion` (slerp,
+`fromEulerAngles`, `toMatrix`, Hamilton convention), `Float3`/`Float2`, `Mat4`. This kills a whole
+class of subtle axis-order / Hamilton-convention bugs that hand-rolled quaternions invite, and
+keeps `:core` pure-JVM (the library is pure-JVM too).
+- `:core` does NOT define its own `Quaternion`/`Mat4`. It uses the library types directly.
+- `:core` still owns the small wrappers that the library does NOT give us: `MeshData(positions,
+  texCoords, indices)` (GL buffer layout) and any domain value types (`GazeState`, etc.).
+- **Calibration stays ours (see §6).** The library gives the *operations*; it cannot pick our
+  *convention* (which way yaw is signed, V-flip). `ViewCalibration`/`AxisConvention` operate on top
+  of `kotlin-math` types — the sign decisions are still confined to one place and property-pinned.
+- One library-boundary test: assert the library's quaternion `slerp`/`fromEulerAngles` behave as we
+  expect (endpoints, normalization, axis order) so a future library bump can't silently shift the
+  convention under us.
 
 ### 4.2 Orientation pipeline
 - `OrientationProcessor` — calibration (store reference quat; relative = current · ref⁻¹), SLERP.
@@ -342,7 +353,8 @@ source). Swapping to a future realtime detector or Insta360 source = one `@Binds
 ## 8. Test strategy (three tiers)
 
 ### Tier 1 — `:core` pure JVM (JUnit + **kotest-property**, the bulk, **blocking gate**)
-Quaternion algebra; `OrientationProcessor` calibration/relative math; `OrientationSmoothing`
+`kotlin-math` boundary test (slerp/fromEulerAngles endpoints, normalization, axis order — guards a
+library bump); `OrientationProcessor` calibration/relative math; `OrientationSmoothing`
 dt-independence (at-rest jitter shrinks, fast turn passes through); `GazePredictor` (zero-velocity
 identity, constant-velocity linear lead); `EquirectProjection` mesh/UV round-trip; `PanoramaFov` /
 `ArrowResolver` boundaries + nearest selection; `SidecarParser` / `DetectionTimeline` edges;
@@ -403,6 +415,23 @@ still does) passes every `:core` test including the negative one, because the ad
 is organizational, so the mitigation is structural and test-enforced, not disciplinary.
 
 ---
+
+## 10a. Dependencies — buy vs build (verified June 2026)
+
+A library survey (GitHub release dates checked 2026-06-14) settled what we reuse vs write:
+
+| Area | Decision | Why |
+|---|---|---|
+| Quaternion / matrix algebra | **`dev.romainguy:kotlin-math`** | Alive (v1.8.0, Mar 2026), Apache-2.0, Kotlin-idiomatic, pure-JVM. Removes axis-order/Hamilton bugs. |
+| Gyro → fused orientation | **Android `SensorManager` `TYPE_ROTATION_VECTOR`** | The OS already does sensor fusion and returns a unit quaternion. A 3rd-party lib (FSensor) solves a problem we don't have. |
+| Sphere render / equirect / playback | **Own GL ES 2 renderer** (not media3 `SphericalGLSurfaceView`) | The media3 view is alive & not deprecated, but cannot do VR dual-viewport, predictive rotation, or our calibration/sensitivity — all of which are core features. Taking it would force forking its GL layer for VR anyway; simpler to own ~200 lines. |
+| VR split-screen (2 viewports, IPD, lens) | **Own** (`StereoEyeLayout` + renderer) | No live Kotlin/Compose lib in 2026. Google Cardboard is the only live stereo+distortion source but is C++/NDK-only with no Kotlin API; lens distortion isn't needed for non-cardboard split-screen. |
+| Direction arrow (FOV math) | **Own** (`PanoramaFov` / `ArrowResolver`) | Pure domain logic; no library exists. |
+| Video decode → texture | **media3 ExoPlayer → `SurfaceTexture` (OES)** | Standard, alive; we own only the rendering, not the decode. |
+
+Rejected as abandoned/unfit: Google VR (GVR) SDK (archived 2019, Services pulled Nov 2023),
+Rajawali (no release since 2021), Pano360/MD360 (2022/2017), Filament (alive but overkill for one
+equirect sphere). Insta360 SDK intentionally excluded (the whole point of v2).
 
 ## 11. Out of scope (explicit)
 
